@@ -1,6 +1,9 @@
 <?php
 
 use Illuminate\Support\Facades\Route;
+use App\Http\Controllers\Admin\OrderController;
+use App\Models\OrderStatusLog;
+use App\Http\Controllers\Admin\OrderStatusController;
 
 /*
 |--------------------------------------------------------------------------
@@ -27,7 +30,7 @@ Route::prefix('admin')->name('admin.')->group(function () {
     })->name('dashboard');
 
     // Tài khoản
-    Route::get('/accounts', function () use (&$admin) {
+    Route::get('/accounts', function () {
         $admin = (object)[
             'full_name' => 'Admin Test',
             'avatar' => 'default-avatar.png'
@@ -55,12 +58,48 @@ Route::prefix('admin')->name('admin.')->group(function () {
 
     // Đơn hàng
     Route::get('/orders', function () {
+
         $admin = (object)[
             'full_name' => 'Admin Test',
             'avatar' => 'default-avatar.png'
         ];
-        return view('admin.orders.index', compact('admin'));
+
+        $orders = \App\Models\Order::latest()->get();
+
+        return view('admin.orders.index', compact('admin', 'orders'));
     })->name('orders.index');
+
+    // Chi tiết đơn hàng 
+    Route::get('/orders/{id}', function ($id) {
+
+        $admin = (object)[
+            'full_name' => 'Admin Test',
+            'avatar' => 'default-avatar.png'
+        ];
+
+        $order = \App\Models\Order::with(['items.product', 'statusLogs'])->findOrFail($id);
+
+        return view('admin.orders.show', compact('admin', 'order'));
+    })->name('orders.show');
+
+    // ===============================================
+    // ROUTE MỚI: IN VẬN ĐƠN (PDF / MÁY IN)
+    // ===============================================
+    Route::get('/orders/{id}/print', [OrderController::class, 'print'])->name('orders.print');
+
+
+    /*
+    |--------------------------------------------------------------------------
+    | STATUS ROUTES (ĐÃ TÁCH CONTROLLER – KHÔNG MẤT CHỨC NĂNG CŨ)
+    |--------------------------------------------------------------------------
+    */
+
+    // Đã thay đổi thành updateStatus
+    Route::post('/orders/{id}/status', [OrderStatusController::class, 'updateStatus']);
+
+    // Thêm route Undo riêng
+    Route::post('/orders/{id}/undo', [OrderStatusController::class, 'undo']);
+
 
     // Vai trò
     Route::get('/roles', function () {
@@ -138,4 +177,5 @@ Route::prefix('admin')->name('admin.')->group(function () {
     Route::get('/', function () {
         return redirect()->route('admin.dashboard');
     });
+
 });
