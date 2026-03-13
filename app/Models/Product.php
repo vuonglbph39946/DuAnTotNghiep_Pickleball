@@ -8,8 +8,10 @@ class Product extends Model
 {
     protected $table = 'products';
 
+    // ĐÃ FIX: Thêm 'sku' vào danh sách này
     protected $fillable = [
         'category_id',
+        'sku',        
         'name',
         'slug',
         'price',
@@ -25,12 +27,26 @@ class Product extends Model
     }
 
     // ==========================================
-    // LIÊN KẾT ĐẾN MODEL PRODUCT IMAGE VỪA TẠO
+    // LIÊN KẾT ĐẾN MODEL PRODUCT IMAGE
     // ==========================================
     public function images()
     {
-        // Vì ProductImage và Product nằm cùng chung thư mục App\Models 
-        // nên Laravel sẽ tự động nhận diện được nhau.
         return $this->hasMany(ProductImage::class, 'product_id', 'id');
+    }
+
+    // ==========================================
+    // LIÊN KẾT ĐẾN DANH MỤC (1 Sản phẩm thuộc 1 Danh mục)
+    // ==========================================
+    public function category()
+    {
+        return $this->belongsTo(Category::class, 'category_id', 'id');
+    }
+
+    // ==========================================
+    // LIÊN KẾT ĐẾN CÁC BIẾN THỂ CỦA SẢN PHẨM (MỚI)
+    // ==========================================
+    public function variants()
+    {
+        return $this->hasMany(ProductVariant::class, 'product_id', 'id');
     }
 }
