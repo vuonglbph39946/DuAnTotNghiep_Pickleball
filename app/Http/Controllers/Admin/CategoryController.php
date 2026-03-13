@@ -21,26 +21,31 @@ class CategoryController extends Controller
     public function index()
     {
         $admin = $this->getAdminMock();
-        $categories = Category::latest()->get();
-        return view('admin.categories.index', compact('admin', 'categories'));
+        $totalCategories = Category::count(); // Đếm tổng số danh mục
+        // Chỉ lấy danh mục GỐC (parent_id = null) và kèm theo các danh mục CON của nó
+        $categories = Category::whereNull('parent_id')->with('children')->latest()->get();
+        
+        return view('admin.categories.index', compact('admin', 'categories', 'totalCategories'));
     }
 
     public function create()
     {
         $admin = $this->getAdminMock();
-        return view('admin.categories.create', compact('admin'));
+        // Lấy các danh mục GỐC để người dùng chọn làm Cha
+        $parentCategories = Category::whereNull('parent_id')->get();
+        return view('admin.categories.create', compact('admin', 'parentCategories'));
     }
 
     public function store(Request $request)
     {
         $request->validate([
             'name' => 'required|unique:categories|max:255',
+            'parent_id' => 'nullable|exists:categories,id', // THÊM VALIDATE PARENT_ID
             'image' => 'nullable|image|mimes:jpeg,png,jpg,webp|max:2048',
             'status' => 'required|in:0,1'
         ]);
 
         $data = $request->except(['image']);
-        
         $data['slug'] = Str::slug($request->name);
 
         if ($request->hasFile('image')) {
@@ -65,7 +70,10 @@ class CategoryController extends Controller
     {
         $admin = $this->getAdminMock();
         $category = Category::findOrFail($id);
-        return view('admin.categories.edit', compact('admin', 'category'));
+        // Lấy danh mục GỐC, nhưng PHẢI LOẠI TRỪ chính nó (Không thể tự nhận mình làm cha)
+        $parentCategories = Category::whereNull('parent_id')->where('id', '!=', $id)->get();
+        
+        return view('admin.categories.edit', compact('admin', 'category', 'parentCategories'));
     }
 
     public function update(Request $request, $id)
@@ -74,34 +82,28 @@ class CategoryController extends Controller
 
         $request->validate([
             'name' => 'required|max:255|unique:categories,name,' . $id,
+            'parent_id' => 'nullable|exists:categories,id', // THÊM VALIDATE PARENT_ID
             'image' => 'nullable|image|mimes:jpeg,png,jpg,webp|max:2048',
             'status' => 'required|in:0,1'
         ]);
 
-        // Lấy dữ liệu ngoại trừ image và remove_image để tự xử lý riêng
         $data = $request->except(['image', 'remove_image']);
         $data['slug'] = Str::slug($request->name);
 
-        // BẮT ĐẦU XỬ LÝ ẢNH
-        // 1. Nếu anh bấm dấu X (remove_image = 1)
+        // Xử lý ảnh (giữ nguyên logic cũ cực xịn của anh em mình)
         if ($request->remove_image == '1') {
             if ($category->image && File::exists(public_path($category->image))) {
                 File::delete(public_path($category->image));
             }
-            $data['image'] = null; // Cập nhật DB thành rỗng
-        } 
-        // 2. Nếu anh tải ảnh mới lên
-        elseif ($request->hasFile('image')) {
-            // Xóa ảnh cũ
+            $data['image'] = null;
+        } elseif ($request->hasFile('image')) {
             if ($category->image && File::exists(public_path($category->image))) {
                 File::delete(public_path($category->image));
             }
-            // Lưu ảnh mới
             $imageName = time() . '.' . $request->image->extension();
             $request->image->move(public_path('uploads/categories'), $imageName);
             $data['image'] = 'uploads/categories/' . $imageName;
         }
-        // KẾT THÚC XỬ LÝ ẢNH
 
         $category->update($data);
 
@@ -110,10 +112,16 @@ class CategoryController extends Controller
 
     public function destroy($id)
     {
-        $category = Category::findOrFail($id);
+        $category = Category::with('children')->findOrFail($id);
 
+        // Chặn xóa nếu có sản phẩm
         if ($category->products()->count() > 0) {
             return back()->with('error', 'Không thể xóa vì đang có sản phẩm thuộc danh mục này.');
+        }
+        
+        // Chặn xóa nếu danh mục này đang là CHA của các danh mục khác
+        if ($category->children->count() > 0) {
+            return back()->with('error', 'Không thể xóa vì danh mục này đang chứa các danh mục con. Hãy xóa danh mục con trước!');
         }
 
         if ($category->image && File::exists(public_path($category->image))) {

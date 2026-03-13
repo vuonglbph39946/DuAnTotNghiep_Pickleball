@@ -44,6 +44,41 @@
                         </div>
 
                         <div class="mb-4">
+                            <label class="form-label fw-bold text-dark d-flex align-items-center">
+                                Phân loại danh mục
+                                <span class="badge bg-light text-secondary border ms-2 fw-medium" style="font-size: 0.75rem; padding: 4px 8px;">Tùy chọn</span>
+                            </label>
+                            
+                            <div class="custom-select-wrapper" id="customSelectWrapper">
+                                <input type="hidden" name="parent_id" id="parent_id_input" value="{{ old('parent_id') }}">
+                                
+                                <div class="custom-select-trigger premium-input @error('parent_id') border-danger @enderror" onclick="toggleCustomSelect()">
+                                    <div class="d-flex align-items-center gap-2">
+                                        <div class="icon-wrap bg-light text-primary"><i class="fa-solid fa-folder-tree"></i></div>
+                                        <span id="selected-text" class="fw-medium text-dark">Không thuộc nhóm nào (Danh mục gốc)</span>
+                                    </div>
+                                    <i class="fa-solid fa-chevron-down text-muted select-arrow"></i>
+                                </div>
+                                
+                                <div class="custom-select-options shadow-lg">
+                                    <div class="custom-opt" data-value="" onclick="selectOption(this, 'Không thuộc nhóm nào (Danh mục gốc)', 'fa-folder-tree')">
+                                        <div class="icon-wrap bg-light text-secondary me-3"><i class="fa-solid fa-layer-group"></i></div>
+                                        <span class="fw-bold">Không thuộc nhóm nào (Danh mục gốc)</span>
+                                    </div>
+                                    
+                                    @foreach($parentCategories as $parent)
+                                        <div class="custom-opt" data-value="{{ $parent->id }}" onclick="selectOption(this, 'Thuộc nhóm: {{ $parent->name }}', 'fa-folder')">
+                                            <div class="icon-wrap bg-primary-soft text-primary me-3"><i class="fa-regular fa-folder-open"></i></div>
+                                            <span class="fw-medium text-dark">Thuộc nhóm: <span class="fw-bold">{{ $parent->name }}</span></span>
+                                        </div>
+                                    @endforeach
+                                </div>
+                            </div>
+                            
+                            @error('parent_id') <div class="text-danger small fw-medium mt-2">{{ $message }}</div> @enderror
+                        </div>
+
+                        <div class="mb-4">
                             <label class="form-label fw-bold text-dark">Hình ảnh đại diện</label>
                             
                             <div class="upload-box shadow-sm" id="upload-box" onclick="document.getElementById('image-input').click()">
@@ -105,8 +140,50 @@
     </div>
 </div>
 
-{{-- SCRIPT: XỬ LÝ PREVIEW ẢNH SIÊU MƯỢT --}}
 <script>
+    // ----- LOGIC CUSTOM DROPDOWN SELECT -----
+    function toggleCustomSelect() {
+        document.getElementById('customSelectWrapper').classList.toggle('open');
+    }
+
+    function selectOption(element, text, iconClass) {
+        // Gán value cho thẻ input ẩn
+        let value = element.getAttribute('data-value');
+        document.getElementById('parent_id_input').value = value;
+        
+        // Đổi text và icon hiển thị
+        let triggerIcon = document.querySelector('.custom-select-trigger .icon-wrap i');
+        triggerIcon.className = `fa-solid ${iconClass}`;
+        document.getElementById('selected-text').innerText = text;
+        
+        // Đóng menu
+        document.getElementById('customSelectWrapper').classList.remove('open');
+        
+        // Highlight thẻ được chọn
+        document.querySelectorAll('.custom-opt').forEach(opt => opt.classList.remove('active'));
+        element.classList.add('active');
+    }
+
+    // Đóng dropdown khi click ra ngoài
+    document.addEventListener('click', function(e) {
+        let wrapper = document.getElementById('customSelectWrapper');
+        if (!wrapper.contains(e.target)) {
+            wrapper.classList.remove('open');
+        }
+    });
+
+    // Auto chọn lại khi có lỗi (old value)
+    window.addEventListener('DOMContentLoaded', (event) => {
+        let oldVal = document.getElementById('parent_id_input').value;
+        if(oldVal) {
+            let opt = document.querySelector(`.custom-opt[data-value="${oldVal}"]`);
+            if(opt) {
+                opt.click();
+            }
+        }
+    });
+
+    // ----- LOGIC UPLOAD ẢNH -----
     function previewImage(input) {
         var preview = document.getElementById('image-preview');
         var content = document.getElementById('upload-content');
@@ -125,106 +202,90 @@
     }
 
     function removeImage(event) {
-        event.stopPropagation(); // Ngăn chặn nổi bọt (không cho click xuyên xuống thẻ cha)
-        
+        event.stopPropagation();
         var input = document.getElementById('image-input');
         var preview = document.getElementById('image-preview');
         var content = document.getElementById('upload-content');
         var removeBtn = document.getElementById('remove-btn');
         
-        // Reset giá trị
         input.value = ""; 
         preview.src = "";
         
-        // Chuyển đổi trạng thái hiển thị
         preview.classList.add('d-none');
         removeBtn.classList.add('d-none');
         content.classList.remove('d-none');
     }
 </script>
 
-{{-- SUPER CSS UI/UX LỘT XÁC --}}
 <style>
-    /* Typography & Utils */
     .fw-extrabold { font-weight: 800; }
     .icon-box-md { width: 45px; height: 45px; border-radius: 12px; display: inline-flex; align-items: center; justify-content: center; font-size: 1.2rem; }
     .bg-gradient-primary { background: linear-gradient(135deg, #3b82f6, #2563eb); }
     .shadow-primary { box-shadow: 0 8px 20px rgba(37, 99, 235, 0.3); }
+    .bg-primary-soft { background-color: #eff6ff; }
 
-    /* Layout & Cards */
     .premium-card { border-radius: 20px; }
     
     .fade-in-up { animation: fadeInUp 0.5s ease-out forwards; opacity: 0; transform: translateY(15px); }
     @keyframes fadeInUp { to { opacity: 1; transform: translateY(0); } }
 
-    /* Form Inputs */
     .premium-input {
-        border-radius: 12px;
-        border: 1px solid #e2e8f0;
-        padding: 14px 20px;
-        font-size: 0.95rem;
-        background-color: #f8fafc;
-        transition: all 0.3s ease;
+        border-radius: 12px; border: 1px solid #e2e8f0; padding: 14px 20px;
+        font-size: 0.95rem; background-color: #f8fafc; transition: all 0.3s ease;
     }
-    .premium-input:focus {
-        background-color: #fff;
-        border-color: #3b82f6;
-        box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.15);
-    }
-    .premium-input::placeholder { color: #94a3b8; }
+    .premium-input:focus { background-color: #fff; border-color: #3b82f6; box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.15); }
 
-    /* Custom Radio Buttons */
-    .custom-radio .form-check-input {
-        width: 1.2rem; height: 1.2rem; cursor: pointer;
+    /* ====== CUSTOM SELECT CSS LỘT XÁC ====== */
+    .custom-select-wrapper { position: relative; user-select: none; width: 100%; }
+    .custom-select-trigger {
+        display: flex; align-items: center; justify-content: space-between;
+        cursor: pointer; background-color: #f8fafc; padding: 10px 16px;
     }
-    .custom-radio .form-check-input:checked {
-        background-color: #3b82f6; border-color: #3b82f6;
-        box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.2);
+    .custom-select-wrapper.open .custom-select-trigger {
+        background-color: #fff; border-color: #3b82f6; box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.15);
     }
-    .custom-radio .form-check-label { cursor: pointer; }
+    .custom-select-wrapper.open .select-arrow { transform: rotate(180deg); }
+    .select-arrow { transition: transform 0.3s ease; }
+    
+    .icon-wrap { width: 32px; height: 32px; border-radius: 8px; display: flex; align-items: center; justify-content: center; }
 
-    /* Upload Box UI */
-    .upload-box {
-        position: relative;
-        height: 220px;
-        border: 2px dashed #cbd5e1;
-        border-radius: 16px;
-        background-color: #f8fafc;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        cursor: pointer;
-        transition: all 0.3s ease;
-        overflow: hidden;
+    .custom-select-options {
+        position: absolute; top: calc(100% + 8px); left: 0; right: 0;
+        background: #fff; border-radius: 16px; border: 1px solid #e2e8f0;
+        opacity: 0; visibility: hidden; transform: translateY(-10px);
+        transition: all 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        z-index: 100; max-height: 250px; overflow-y: auto;
     }
-    .upload-box:hover {
-        border-color: #3b82f6;
-        background-color: #eff6ff;
-    }
-    .upload-box .icon-bg {
-        width: 60px; height: 60px;
-        border-radius: 50%; background: #fff;
-        display: flex; align-items: center; justify-content: center;
-        box-shadow: 0 4px 10px rgba(0,0,0,0.05);
-    }
-    #image-preview {
-        width: 100%; height: 100%;
-        object-fit: contain; /* Hoặc cover tùy sở thích hiển thị của anh */
-        background-color: #f1f5f9;
+    .custom-select-wrapper.open .custom-select-options {
+        opacity: 1; visibility: visible; transform: translateY(0);
     }
     
-    /* Nút Xóa ảnh */
-    .remove-preview-btn {
-        position: absolute;
-        top: 15px; right: 15px;
-        width: 32px; height: 32px;
-        display: flex; align-items: center; justify-content: center;
-        box-shadow: 0 4px 10px rgba(0,0,0,0.2);
-        z-index: 10;
-    }
+    .custom-opt { padding: 12px 16px; display: flex; align-items: center; cursor: pointer; transition: all 0.2s ease; border-bottom: 1px solid #f1f5f9; }
+    .custom-opt:last-child { border-bottom: none; }
+    .custom-opt:hover { background-color: #eff6ff; padding-left: 24px; }
+    .custom-opt.active { background-color: #f8fafc; }
+    /* ====== END CUSTOM SELECT CSS ====== */
 
-    /* Nút bấm hover */
+    .custom-radio .form-check-input { width: 1.2rem; height: 1.2rem; cursor: pointer; }
+    .custom-radio .form-check-input:checked { background-color: #3b82f6; border-color: #3b82f6; box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.2); }
+    .custom-radio .form-check-label { cursor: pointer; }
+
+    .upload-box {
+        position: relative; height: 220px; border: 2px dashed #cbd5e1; border-radius: 16px;
+        background-color: #f8fafc; display: flex; align-items: center; justify-content: center;
+        cursor: pointer; transition: all 0.3s ease; overflow: hidden;
+    }
+    .upload-box:hover { border-color: #3b82f6; background-color: #eff6ff; }
+    .upload-box .icon-bg { width: 60px; height: 60px; border-radius: 50%; background: #fff; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 10px rgba(0,0,0,0.05); }
+    #image-preview { width: 100%; height: 100%; object-fit: contain; background-color: #f1f5f9; }
+    
+    .remove-preview-btn { position: absolute; top: 15px; right: 15px; width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 10px rgba(0,0,0,0.2); z-index: 10; }
     .hover-lift { transition: all 0.2s ease; }
     .hover-lift:hover { transform: translateY(-2px); }
+    
+    /* Scrollbar cho dropdown */
+    .custom-select-options::-webkit-scrollbar { width: 6px; }
+    .custom-select-options::-webkit-scrollbar-track { background: transparent; }
+    .custom-select-options::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
 </style>
 @endsection

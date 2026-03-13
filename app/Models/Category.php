@@ -21,4 +21,19 @@ class Category extends Model
     {
         return $this->hasMany(Product::class);
     }
+
+    // ==========================================
+    // LIÊN KẾT DANH MỤC CHA - CON
+    // ==========================================
+    // Lấy ra danh mục cha
+    public function parent()
+    {
+        return $this->belongsTo(Category::class, 'parent_id');
+    }
+
+    // Lấy ra các danh mục con
+    public function children()
+    {
+        return $this->hasMany(Category::class, 'parent_id');
+    }
 }
