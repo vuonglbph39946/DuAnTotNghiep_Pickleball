@@ -6,6 +6,7 @@
 
 <div class="container-fluid px-4 py-4 premium-layout" style="background-color: #f4f7f9; font-family: 'Inter', sans-serif; min-height: 100vh;">
 
+    {{-- HEADER --}}
     <div class="d-flex align-items-center justify-content-between mb-4 fade-in-up" style="animation-delay: 0.1s;">
         <div>
             <h2 class="fw-extrabold mb-1 text-dark d-flex align-items-center" style="letter-spacing: -0.5px;">
@@ -19,44 +20,76 @@
             <div class="stats-badge shadow-sm">
                 <i class="fa-solid fa-chart-pie text-primary me-2"></i>
                 <span class="text-muted fw-semibold">Tổng số:</span>
-                <span class="fs-5 fw-extrabold text-dark ms-2">{{ count($orders) }}</span> đơn
+                <span class="fs-5 fw-extrabold text-dark ms-2">{{ $totalFiltered ?? count($orders) }}</span> đơn
             </div>
         </div>
     </div>
 
+    {{-- BỘ LỌC VÀ TÌM KIẾM (TÍNH NĂNG MỚI) --}}
+    <div class="card premium-card border-0 shadow-sm mb-4 fade-in-up" style="animation-delay: 0.15s;">
+        <div class="card-body p-3">
+            <form action="{{ route('admin.orders.index') }}" method="GET" class="row g-2 align-items-center">
+                <div class="col-md-5">
+                    <div class="input-group">
+                        <span class="input-group-text bg-light border-end-0 text-muted"><i class="fa-solid fa-magnifying-glass"></i></span>
+                        <input type="text" name="search" class="form-control bg-light border-start-0 ps-0 fw-medium" placeholder="Tìm mã đơn, tên hoặc SĐT khách..." value="{{ request('search') }}">
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <select name="status" class="form-select bg-light fw-medium text-secondary">
+                        <option value="">Tất cả trạng thái</option>
+                        <option value="pending" {{ request('status') == 'pending' ? 'selected' : '' }}>Chờ xác nhận</option>
+                        <option value="confirmed" {{ request('status') == 'confirmed' ? 'selected' : '' }}>Đã xác nhận</option>
+                        <option value="shipping" {{ request('status') == 'shipping' ? 'selected' : '' }}>Đang giao</option>
+                        <option value="completed" {{ request('status') == 'completed' ? 'selected' : '' }}>Hoàn thành</option>
+                        <option value="cancelled" {{ request('status') == 'cancelled' ? 'selected' : '' }}>Đã huỷ</option>
+                    </select>
+                </div>
+                <div class="col-md-4 d-flex gap-2">
+                    <button type="submit" class="btn btn-dark fw-bold px-4 hover-lift">Lọc</button>
+                    @if(request('search') || request('status'))
+                        <a href="{{ route('admin.orders.index') }}" class="btn btn-light fw-bold text-danger border hover-lift">Xóa lọc</a>
+                    @endif
+                </div>
+            </form>
+        </div>
+    </div>
+
+    {{-- BẢNG DỮ LIỆU ĐƠN HÀNG --}}
     <div class="card premium-card fade-in-up" style="animation-delay: 0.2s;">
         <div class="card-body p-0 mt-2">
             <div class="table-responsive px-4 pb-4 pt-2">
                 <table class="table align-middle premium-table mb-0">
                     <thead>
                         <tr>
-                            <th style="width: 10%;">Mã Đơn</th>
+                            <th style="width: 15%;">Mã Đơn & Thời gian</th>
                             <th style="width: 25%;">Khách hàng</th>
                             <th style="width: 15%;">Tổng tiền</th>
                             <th class="text-center" style="width: 15%;">Thanh toán</th>
-                            <th style="width: 20%;">Trạng thái</th>
+                            <th style="width: 15%;">Trạng thái</th>
                             <th class="text-end pe-4" style="width: 15%;">Thao tác</th>
                         </tr>
                     </thead>
                     <tbody>
                         @forelse($orders as $order)
-                            @php
-                                // Chọc xuống DB lấy thông tin khách hàng cho từng dòng
-                                $address = \Illuminate\Support\Facades\DB::table('addresses')->where('id', $order->address_id)->first();
-                            @endphp
+                            {{-- ĐÃ GỠ BỎ ĐOẠN CODE CHỌC DB GÂY LỖI N+1 Ở ĐÂY --}}
                             <tr>
                                 <td class="ps-3 py-3">
-                                    <span class="fw-bold text-dark">#{{ $order->id }}</span>
+                                    {{-- IN MÃ ĐƠN HÀNG VÀ NGÀY GIỜ --}}
+                                    <span class="fw-bold text-dark fs-6">#{{ $order->order_code ?? $order->id }}</span><br>
+                                    <span class="text-muted small fw-medium mt-1 d-inline-block">
+                                        <i class="fa-regular fa-clock me-1"></i>{{ $order->created_at->format('d/m/Y H:i') }}
+                                    </span>
                                 </td>
 
                                 <td>
                                     <div class="d-flex align-items-center">
                                         <div class="avatar-circle me-3 bg-primary-soft text-primary shadow-sm fw-bold text-uppercase">
-                                            {{ $address ? mb_substr($address->receiver_name, 0, 1) : 'U' }}
+                                            {{ $order->address ? mb_substr($order->address->receiver_name, 0, 1) : 'U' }}
                                         </div>
                                         <div>
-                                            <h6 class="fw-bold mb-0 text-dark">{{ $address ? $address->receiver_name : 'User '.$order->user_id }}</h6>
-                                            <span class="text-muted small"><i class="fa-solid fa-phone-flip me-1"></i>{{ $address ? $address->phone : 'N/A' }}</span>
+                                            <h6 class="fw-bold mb-0 text-dark">{{ $order->address ? $order->address->receiver_name : 'User '.$order->user_id }}</h6>
+                                            <span class="text-muted small"><i class="fa-solid fa-phone-flip me-1"></i>{{ $order->address ? $order->address->phone : 'N/A' }}</span>
                                         </div>
                                     </div>
                                 </td>
@@ -68,6 +101,7 @@
                                 </td>
 
                                 <td class="text-center">
+                                    {{-- TRẠNG THÁI THANH TOÁN --}}
                                     @if($order->payment_status == 'paid')
                                         <span class="badge-soft badge-soft-success"><i class="fa-solid fa-circle-check me-1"></i>Đã thanh toán</span>
                                     @elseif($order->payment_status == 'unpaid')
@@ -75,6 +109,19 @@
                                     @else
                                         <span class="badge-soft badge-soft-secondary">{{ ucfirst($order->payment_status) }}</span>
                                     @endif
+                                    
+                                    {{-- PHƯƠNG THỨC THANH TOÁN --}}
+                                    <div class="mt-2">
+                                        <span class="badge bg-light text-dark border px-2 py-1 shadow-sm" style="font-size: 0.7rem;">
+                                            @if(strtolower($order->payment_method) == 'momo')
+                                                <i class="fa-solid fa-wallet text-pink-500 me-1" style="color: #a50064;"></i> MOMO
+                                            @elseif(strtolower($order->payment_method) == 'vnpay')
+                                                <i class="fa-solid fa-credit-card text-primary me-1"></i> VNPAY
+                                            @else
+                                                <i class="fa-solid fa-truck text-secondary me-1"></i> THU HỘ (COD)
+                                            @endif
+                                        </span>
+                                    </div>
                                 </td>
 
                                 <td>
@@ -95,7 +142,7 @@
                                     <div class="empty-state">
                                         <i class="fa-solid fa-box-open fs-1 text-muted opacity-25 mb-3"></i>
                                         <h5 class="fw-bold text-dark">Chưa có đơn hàng nào</h5>
-                                        <p class="text-muted">Hệ thống chưa ghi nhận đơn hàng nào ở thời điểm hiện tại.</p>
+                                        <p class="text-muted">Hệ thống chưa ghi nhận hoặc không tìm thấy đơn hàng phù hợp.</p>
                                     </div>
                                 </td>
                             </tr>
@@ -104,7 +151,7 @@
                 </table>
             </div>
             
-            @if(method_exists($orders, 'links'))
+            @if(method_exists($orders, 'links') && $orders->hasPages())
                 <div class="card-footer bg-transparent border-0 px-4 pb-4">
                     {{ $orders->links('pagination::bootstrap-5') }}
                 </div>

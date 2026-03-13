@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Hóa Đơn / Vận Đơn #{{ $order->id }}</title>
+    <title>Hóa Đơn / Vận Đơn #{{ $order->order_code ?? $order->id }}</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
         body { font-family: 'Inter', sans-serif; color: #000; background: #fff; margin: 0; padding: 20px; font-size: 14px; }
@@ -23,6 +23,10 @@
         .clearfix::after { content: ""; clear: both; display: table; }
         .footer-signatures { margin-top: 50px; display: flex; justify-content: space-between; text-align: center; }
         .signature-box { width: 200px; }
+        
+        /* Highlight cho phần Phân loại */
+        .variant-text { font-size: 12px; font-style: italic; font-weight: 600; padding-top: 4px; display: inline-block; }
+
         /* CỰC KỲ QUAN TRỌNG: ẨN MỌI THỨ THỪA KHI IN */
         @media print {
             body { padding: 0; background: #fff; }
@@ -36,13 +40,23 @@
     <div class="header">
         <div class="logo">
             <h2>PICKLEBALL STORE</h2>
-            <p style="margin: 5px 0 0 0; color: #555;">Hệ thống cung cấp vợt chuẩn quốc tế</p>
+            <p style="margin: 5px 0 0 0; color: #555;">Hệ thống cung cấp thiết bị thể thao chuẩn quốc tế</p>
         </div>
         <div class="info">
             <h3 style="margin: 0 0 5px 0; font-size: 20px;">HÓA ĐƠN BÁN HÀNG</h3>
-            <strong>Mã đơn:</strong> #{{ $order->id }}<br>
+            <strong>Mã đơn:</strong> #{{ $order->order_code ?? $order->id }}<br>
             <strong>Ngày tạo:</strong> {{ $order->created_at ? $order->created_at->format('d/m/Y H:i') : now()->format('d/m/Y') }}<br>
-            <strong>Trạng thái:</strong> {{ strtoupper($order->payment_status == 'paid' ? 'Đã thanh toán' : 'Thu hộ COD') }}
+            <strong>Thanh toán:</strong> 
+            @if(strtolower($order->payment_method) == 'momo') MOMO
+            @elseif(strtolower($order->payment_method) == 'vnpay') VNPAY
+            @else Thu hộ (COD)
+            @endif
+            - 
+            @if($order->payment_status == 'paid') 
+                <strong>Đã thanh toán</strong>
+            @else 
+                Chưa thanh toán
+            @endif
         </div>
     </div>
 
@@ -54,10 +68,16 @@
                 <strong>Số điện thoại:</strong> {{ $address ? $address->phone : 'N/A' }}<br>
                 <strong>Địa chỉ:</strong> {{ $address ? $address->address . ', ' . $address->ward . ', ' . $address->district . ', ' . $address->city : 'N/A' }}
             </div>
+            
+            {{-- CỤM HIỂN THỊ TIỀN THU HỘ CHO SHIPPER --}}
             <div style="border: 2px dashed #000; padding: 15px; text-align: center; border-radius: 8px;">
                 <strong style="font-size: 16px;">TIỀN THU HỘ (COD)</strong><br>
                 <span style="font-size: 24px; font-weight: 800;">
-                    {{ $order->payment_status == 'unpaid' ? number_format($order->total_amount) . ' đ' : '0 đ' }}
+                    @if($order->payment_status == 'paid')
+                        0 đ
+                    @else
+                        {{ number_format($order->total_amount) }} đ
+                    @endif
                 </span>
             </div>
         </div>
@@ -84,7 +104,14 @@
                 <td class="text-center">{{ $index + 1 }}</td>
                 <td>
                     <strong>{{ $item->product->name ?? 'Sản phẩm' }}</strong><br>
-                    <span style="font-size: 12px; color: #666;">SKU: #{{ $item->product_id }}</span>
+                    
+                    {{-- HIỂN THỊ BIẾN THỂ TRÊN HÓA ĐƠN --}}
+                    @if($item->variant_info)
+                        <span class="variant-text">Phân loại: {{ $item->variant_info }}</span><br>
+                    @endif
+                    
+                    {{-- LẤY SKU TỪ BIẾN THỂ NẾU CÓ, NẾU KHÔNG LẤY TỪ SẢN PHẨM GỐC --}}
+                    <span style="font-size: 12px; color: #666;">SKU: #{{ $item->variant ? $item->variant->sku : ($item->product->sku ?? $item->product_id) }}</span>
                 </td>
                 <td class="text-center">{{ $item->quantity }}</td>
                 <td class="text-end">{{ number_format($item->price) }} đ</td>
@@ -103,7 +130,7 @@
                 </tr>
                 <tr>
                     <td>Phí vận chuyển:</td>
-                    <td class="text-end">0 đ</td>
+                    <td class="text-end">{{ number_format($order->shipping_fee ?? 0) }} đ</td>
                 </tr>
                 <tr class="grand-total">
                     <td>TỔNG THANH TOÁN:</td>
@@ -130,6 +157,7 @@
 </div>
 
 <script>
+    // Tự động bật hộp thoại in khi trang vừa tải xong
     window.onload = function() {
         window.print();
     }

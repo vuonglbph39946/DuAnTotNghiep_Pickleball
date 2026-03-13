@@ -5,6 +5,23 @@
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 
+@php
+    // TÍNH TOÁN TRƯỚC TIỀN HÀNG ĐỂ HIỂN THỊ Ở CỘT TRÁI
+    $sum = 0;
+    foreach($order->items as $item) {
+        $sum += $item->price * $item->quantity;
+    }
+    
+    // MẢNG VIỆT HÓA TRẠNG THÁI
+    $statusLabels = [
+        'pending' => 'Chờ xác nhận',
+        'confirmed' => 'Đã xác nhận',
+        'shipping' => 'Đang giao hàng',
+        'completed' => 'Hoàn thành',
+        'cancelled' => 'Đã huỷ'
+    ];
+@endphp
+
 <div class="container-fluid px-4 py-4 premium-layout" style="background-color: #f4f7f9; font-family: 'Inter', sans-serif;">
 
     <div class="d-flex align-items-center justify-content-between mb-4 fade-in-up" style="animation-delay: 0.1s;">
@@ -12,7 +29,7 @@
             <nav aria-label="breadcrumb">
                 <ol class="breadcrumb mb-1">
                     <li class="breadcrumb-item"><a href="{{ route('admin.orders.index') }}" class="text-decoration-none text-muted"><i class="fa-solid fa-arrow-left me-1"></i>Danh sách</a></li>
-                    <li class="breadcrumb-item active fw-bold text-primary" aria-current="page">Chi tiết #{{ $order->id }}</li>
+                    <li class="breadcrumb-item active fw-bold text-primary" aria-current="page">Chi tiết #{{ $order->order_code ?? $order->id }}</li>
                 </ol>
             </nav>
             <h2 class="fw-extrabold mb-0 text-dark" style="letter-spacing: -0.5px;">Quản lý đơn hàng</h2>
@@ -35,8 +52,7 @@
                 </div>
                 <div class="card-body px-4 py-3">
                     @php
-                        // Dùng DB Facade truy vấn thẳng vào database để tránh lỗi Not Found Model Address
-                        $address = \Illuminate\Support\Facades\DB::table('addresses')->where('id', $order->address_id)->first();
+                        $address = $order->address;
                     @endphp
 
                     <div class="info-group">
@@ -63,21 +79,46 @@
                     </div>
 
                     <div class="info-group border-0">
-                        <div class="info-label text-muted small mb-1">Trạng thái thanh toán</div>
-                        <div class="info-value">
+                        <div class="info-label text-muted small mb-1">Trạng thái & Phương thức thanh toán</div>
+                        
+                        {{-- ĐÃ FIX: BẢO VỆ GIAO DIỆN KHI TRẠNG THÁI LÀ HOÀN TIỀN (REFUNDED) --}}
+                        <div class="info-value d-flex align-items-center gap-2">
                             @if($order->payment_status == 'unpaid')
                                 <span class="badge-soft badge-soft-warning"><i class="fa-solid fa-circle-exclamation me-1"></i> Chưa thanh toán</span>
-                            @else
-                                <span class="badge-soft badge-soft-success"><i class="fa-solid fa-circle-check me-1"></i> {{ ucfirst($order->payment_status) }}</span>
+                            @elseif($order->payment_status == 'paid')
+                                <span class="badge-soft badge-soft-success"><i class="fa-solid fa-circle-check me-1"></i> Đã thanh toán</span>
+                            @elseif($order->payment_status == 'refunded')
+                                <span class="badge-soft" style="background: #f1f5f9; color: #475569; border: 1px solid #cbd5e1;"><i class="fa-solid fa-rotate-left me-1"></i> Đã hoàn tiền</span>
                             @endif
+
+                            <span class="badge bg-light text-dark border shadow-sm">
+                                @if(strtolower($order->payment_method) == 'momo')
+                                    <i class="fa-solid fa-wallet text-pink-500" style="color: #a50064;"></i> MOMO
+                                @elseif(strtolower($order->payment_method) == 'vnpay')
+                                    <i class="fa-solid fa-credit-card text-primary"></i> VNPAY
+                                @else
+                                    <i class="fa-solid fa-truck text-secondary"></i> COD
+                                @endif
+                            </span>
                         </div>
+                        {{-- KẾT THÚC FIX BẢO VỆ GIAO DIỆN HOÀN TIỀN --}}
                     </div>
                 </div>
-                <div class="card-footer border-0 rounded-bottom-4 px-4 py-4 bg-gradient-light">
-                    <div class="d-flex justify-content-between align-items-center">
-                        <span class="text-muted fw-bold">TỔNG THANH TOÁN</span>
-                        <span class="fs-3 fw-extrabold text-danger text-gradient" style="letter-spacing: -0.5px;">
-                            {{ number_format($order->total_amount) }}<span class="fs-5 ms-1 text-muted fw-bold">đ</span>
+                
+                <div class="card-footer border-0 rounded-bottom-4 px-4 py-3 bg-gradient-light">
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <span class="text-muted fw-semibold small">Tiền hàng:</span>
+                        <span class="fw-bold text-dark">{{ number_format($sum) }} đ</span>
+                    </div>
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <span class="text-muted fw-semibold small">Phí vận chuyển:</span>
+                        <span class="fw-bold text-dark">{{ number_format($order->shipping_fee ?? 0) }} đ</span>
+                    </div>
+                    <hr class="my-2 border-secondary opacity-10">
+                    <div class="d-flex justify-content-between align-items-center mt-2">
+                        <span class="text-dark fw-bold">TỔNG THANH TOÁN:</span>
+                        <span class="fs-4 fw-extrabold text-danger text-gradient" style="letter-spacing: -0.5px;">
+                            {{ number_format($order->total_amount) }}<span class="fs-6 ms-1 text-muted fw-bold">đ</span>
                         </span>
                     </div>
                 </div>
@@ -91,7 +132,7 @@
                     </h6>
 
                     <div class="mb-4">
-                        <label class="form-label text-muted small fw-bold">Thay đổi trạng thái đơn hàng</label>
+                        <label class="form-label text-muted small fw-bold mb-2">Thay đổi trạng thái đơn hàng</label>
                         
                         <select id="statusSelect" class="d-none" {{ in_array($order->order_status, ['cancelled', 'completed']) ? 'disabled' : '' }}>
                             @php
@@ -111,17 +152,17 @@
                                         }
                                     }
                                 @endphp
-                                <option value="{{ $st }}" {{ $order->order_status==$st?'selected':'' }} {{ $disabled }}>{{ ucfirst($st) }}</option>
+                                <option value="{{ $st }}" {{ $order->order_status==$st?'selected':'' }} {{ $disabled }}>{{ $st }}</option>
                             @endforeach
                         </select>
 
                         <div class="status-dropdown-wrapper" id="dropdownWrapper">
                             <div class="custom-select-trigger {{ in_array($order->order_status, ['cancelled', 'completed']) ? 'disabled' : '' }}" onclick="toggleStatusDropdown()">
                                 <div id="triggerContent" class="d-flex align-items-center gap-2"></div>
-                                <i class="fa-solid fa-chevron-down text-muted"></i>
+                                <i class="fa-solid fa-chevron-down text-muted ms-2"></i>
                             </div>
 
-                            <div class="custom-select-options shadow-lg" id="customSelectOptions">
+                            <div class="custom-select-options shadow-xl" id="customSelectOptions">
                                 @foreach(['pending','confirmed','shipping','completed','cancelled'] as $st)
                                     @php
                                         $isDisabled = true;
@@ -133,20 +174,22 @@
                                             }
                                         }
                                         
-                                        $icon = ''; $colorClass = '';
-                                        if($st == 'pending') { $icon = 'fa-box-open'; $colorClass = 'text-secondary'; }
-                                        elseif($st == 'confirmed') { $icon = 'fa-clipboard-check'; $colorClass = 'text-primary'; }
-                                        elseif($st == 'shipping') { $icon = 'fa-truck-fast'; $colorClass = 'text-warning'; }
-                                        elseif($st == 'completed') { $icon = 'fa-house-circle-check'; $colorClass = 'text-success'; }
-                                        elseif($st == 'cancelled') { $icon = 'fa-ban'; $colorClass = 'text-danger'; }
+                                        $icon = ''; $colorClass = ''; $bgClass = '';
+                                        if($st == 'pending') { $icon = 'fa-box-open'; $colorClass = 'text-secondary'; $bgClass = 'bg-secondary-soft'; }
+                                        elseif($st == 'confirmed') { $icon = 'fa-clipboard-check'; $colorClass = 'text-primary'; $bgClass = 'bg-primary-soft';}
+                                        elseif($st == 'shipping') { $icon = 'fa-truck-fast'; $colorClass = 'text-warning'; $bgClass = 'bg-warning-soft';}
+                                        elseif($st == 'completed') { $icon = 'fa-house-circle-check'; $colorClass = 'text-success'; $bgClass = 'bg-success-soft';}
+                                        elseif($st == 'cancelled') { $icon = 'fa-ban'; $colorClass = 'text-danger'; $bgClass = 'bg-danger-soft';}
                                     @endphp
                                     
-                                    <div class="custom-opt {{ $isDisabled ? 'disabled-opt' : '' }}" 
+                                    <div class="custom-opt {{ $isDisabled ? 'disabled-opt' : '' }} {{ $st === $current ? 'active-opt' : '' }}" 
                                          data-value="{{ $st }}" 
                                          onclick="if(!this.classList.contains('disabled-opt')) setCustomSelect('{{ $st }}')">
-                                        <div class="icon-wrap {{ $colorClass }} bg-light"><i class="fa-solid {{ $icon }}"></i></div>
-                                        <span>{{ ucfirst($st) }}</span>
-                                        @if($st === $current) <i class="fa-solid fa-check ms-auto text-primary"></i> @endif
+                                        <div class="icon-wrap {{ $colorClass }} {{ $bgClass }}"><i class="fa-solid {{ $icon }}"></i></div>
+                                        <span class="fw-bold text-dark">{{ $statusLabels[$st] }}</span>
+                                        @if($st === $current) 
+                                            <span class="ms-auto check-icon {{ $colorClass }}"><i class="fa-solid fa-circle-check fs-5"></i></span> 
+                                        @endif
                                     </div>
                                 @endforeach
                             </div>
@@ -154,14 +197,14 @@
 
                     </div>
 
-                    <div class="d-grid gap-3">
+                    <div class="d-grid gap-3 mt-4">
                         <button onclick="handleUpdate()" id="btnUpdate" class="btn btn-gradient-primary btn-lg shadow-primary" {{ in_array($order->order_status, ['cancelled', 'completed']) ? 'disabled' : '' }}>
                             <i class="fa-solid fa-cloud-arrow-up me-2"></i>Lưu thay đổi
                         </button>
 
-                        @if(!in_array($order->order_status, ['pending', 'cancelled']))
+                        @if(!in_array($order->order_status, ['pending', 'cancelled', 'completed']))
                         <button onclick="confirmUndo()" id="btnUndo" class="btn btn-light fw-bold shadow-sm hover-lift text-warning border-warning">
-                            <i class="fa-solid fa-rotate-left me-2"></i>Hoàn tác
+                            <i class="fa-solid fa-rotate-left me-2"></i>Hoàn tác trạng thái
                         </button>
                         @endif
                     </div>
@@ -181,7 +224,7 @@
                             Hành trình đơn hàng
                         </h6>
                         <span id="currentStatus" data-status="{{ $order->order_status }}" class="badge-premium {{ $order->order_status }} shadow-sm">
-                            <span class="status-dot"></span> {{ ucfirst($order->order_status) }}
+                            <span class="status-dot"></span> {{ $statusLabels[$order->order_status] }}
                         </span>
                     </div>
 
@@ -215,7 +258,7 @@
                                         @elseif($step == 'completed') <i class="fa-solid fa-house-circle-check"></i>
                                         @endif
                                     </div>
-                                    <div class="step-title mt-3">{{ ucfirst($step) }}</div>
+                                    <div class="step-title mt-3">{{ $statusLabels[$step] }}</div>
                                 </div>
                             @endforeach
                         </div>
@@ -243,15 +286,14 @@
                                 </tr>
                             </thead>
                             <tbody>
-                                @php $sum=0; @endphp
                                 @foreach($order->items as $item)
-                                    @php $line=$item->price*$item->quantity; $sum+=$line; @endphp
+                                    @php $line = $item->price * $item->quantity; @endphp
                                     <tr>
                                         <td class="ps-4 py-3">
                                             <div class="d-flex align-items-center gap-3">
                                                 @php
                                                     $firstImage = $item->product->images->first();
-                                                    $imageUrl = $firstImage ? asset('storage/' . $firstImage->image_path) : 'https://placehold.co/150x150/f8f9fa/adb5bd?text=No+Image';
+                                                    $imageUrl = $firstImage ? asset($firstImage->image_path) : 'https://placehold.co/150x150/f8f9fa/adb5bd?text=No+Image';
                                                 @endphp
                                                 
                                                 <div class="product-img-premium shadow-sm popup-trigger" onclick="openImageModal('{{ $imageUrl }}')">
@@ -261,14 +303,23 @@
                                                 
                                                 <div style="min-width: 0;"> 
                                                     <h6 class="fw-bold mb-1 text-dark" style="word-break: break-word; white-space: normal;">{{ $item->product->name ?? 'Sản phẩm' }}</h6>
-                                                    <span class="text-muted small">SKU: <span class="fw-medium">#{{ $item->product_id }}</span></span>
+                                                    
+                                                    @if($item->variant_info)
+                                                        <div class="mb-1 mt-1">
+                                                            <span class="badge bg-light text-dark border shadow-sm" style="font-size: 0.75rem; padding: 4px 8px;">
+                                                                <i class="fa-solid fa-tag text-primary opacity-75 me-1"></i> {{ $item->variant_info }}
+                                                            </span>
+                                                        </div>
+                                                    @endif
+
+                                                    <span class="text-muted small">SKU: <span class="fw-medium">#{{ $item->variant ? $item->variant->sku : ($item->product->sku ?? $item->product_id) }}</span></span>
                                                 </div>
                                             </div>
                                         </td>
                                         <td class="text-end fw-medium text-secondary">{{ number_format($item->price) }} đ</td>
                                         
                                         <td class="text-center">
-                                            @php $stock = $item->product->stock ?? 0; @endphp
+                                            @php $stock = $item->variant ? $item->variant->stock : ($item->product->stock ?? 0); @endphp
                                             @if($stock <= 0)
                                                 <span class="badge bg-danger-soft text-danger fw-bold border border-danger px-2 py-1">Hết hàng</span>
                                             @elseif($stock <= 5)
@@ -279,7 +330,7 @@
                                         </td>
 
                                         <td class="text-center">
-                                            <span class="badge bg-primary text-white border px-2 py-1 fs-6 shadow-sm">{{ $item->quantity }}</span>
+                                            <span class="badge bg-dark text-white border px-2 py-1 fs-6 shadow-sm">{{ $item->quantity }}</span>
                                         </td>
                                         <td class="text-end pe-4 fw-extrabold text-danger">{{ number_format($line) }} đ</td>
                                     </tr>
@@ -338,7 +389,7 @@
                                         <h6 class="fw-bold mb-0 text-dark">
                                             {{ $isUndo ? 'Hoàn tác về:' : 'Chuyển trạng thái:' }} 
                                             <span class="badge-soft text-{{ $log->status == 'cancelled' ? 'danger' : ($isUndo ? 'warning' : 'primary') }} bg-{{ $log->status == 'cancelled' ? 'danger' : ($isUndo ? 'warning' : 'primary') }}-soft p-1 px-2 ms-1 rounded">
-                                                {{ ucfirst($log->status) }}
+                                                {{ $statusLabels[$log->status] ?? ucfirst($log->status) }}
                                             </span>
                                         </h6>
                                         <span class="time-badge bg-white shadow-sm border-0"><i class="fa-regular fa-clock text-{{ $isUndo ? 'warning' : 'primary' }} me-1"></i>{{ $log->created_at->format('H:i') }}</span>
@@ -368,9 +419,14 @@
     .fw-extrabold { font-weight: 800; }
     .tracking-wide { letter-spacing: 0.5px; }
     .icon-box-sm { width: 28px; height: 28px; border-radius: 6px; display: inline-flex; align-items: center; justify-content: center; font-size: 0.8rem; }
+    
+    /* System Soft Colors */
     .bg-primary-soft { background: #eff6ff; }
-    .bg-danger-soft { background: #fef2f2; }
+    .bg-success-soft { background: #f0fdf4; }
     .bg-warning-soft { background: #fffbeb; }
+    .bg-danger-soft { background: #fef2f2; }
+    .bg-secondary-soft { background: #f8fafc; }
+
     .text-gradient { background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
     
     /* Cards */
@@ -400,35 +456,39 @@
     .bg-gradient-primary { background: linear-gradient(135deg, #3b82f6, #2563eb); }
     .avatar-circle { width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 0.9rem; }
     .badge-soft { padding: 6px 10px; border-radius: 6px; font-weight: 600; font-size: 0.8rem; }
-    .badge-soft-warning { background: #fffbeb; color: #b45309; border: 1px solid #fde68a;}
-    .badge-soft-success { background: #f0fdf4; color: #166534; border: 1px solid #bbf7d0;}
-
-    /* Custom Status Dropdown */
+    
+    /* SUPER POLISHED SELECT DROPDOWN */
     .status-dropdown-wrapper { position: relative; user-select: none; }
     .custom-select-trigger {
         display: flex; align-items: center; justify-content: space-between;
         padding: 14px 18px; background: #fff; border: 2px solid #e2e8f0;
         border-radius: 12px; cursor: pointer; transition: all 0.2s; font-weight: 600;
-        box-shadow: 0 1px 2px rgba(0,0,0,0.02);
+        box-shadow: 0 2px 4px rgba(0,0,0,0.02);
     }
     .custom-select-trigger:hover { border-color: #3b82f6; }
     .custom-select-trigger.disabled { background: #f8fafc; cursor: not-allowed; opacity: 0.7; border-color: #e2e8f0 !important; }
+    
     .custom-select-options {
         position: absolute; top: calc(100% + 8px); left: 0; right: 0;
-        background: #fff; border-radius: 14px; box-shadow: 0 10px 25px rgba(0,0,0,0.1);
-        border: 1px solid #e2e8f0; opacity: 0; visibility: hidden; transform: translateY(-10px);
-        transition: all 0.2s ease; z-index: 100; overflow: hidden;
+        background: #fff; border-radius: 16px; 
+        box-shadow: 0 10px 40px rgba(0,0,0,0.08); /* Float shadow */
+        border: 1px solid #f1f5f9; opacity: 0; visibility: hidden; transform: translateY(-10px);
+        transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1); z-index: 100;
+        padding: 8px; /* Inner padding for floating items */
     }
     .custom-select-options.show { opacity: 1; visibility: visible; transform: translateY(0); }
+    
     .custom-opt {
-        padding: 12px 18px; display: flex; align-items: center; cursor: pointer; transition: background 0.2s;
-        font-weight: 600; color: #334155; font-size: 0.95rem; border-bottom: 1px solid #f1f5f9;
+        padding: 10px 14px; display: flex; align-items: center; cursor: pointer; 
+        transition: all 0.2s ease; border-radius: 10px; margin-bottom: 4px;
+        border: 1px solid transparent;
     }
-    .custom-opt:last-child { border-bottom: none; }
-    .custom-opt:hover { background: #f8fafc; padding-left: 22px; }
-    .custom-opt.disabled-opt { opacity: 0.4; cursor: not-allowed; background: #fff !important; }
-    .custom-opt.disabled-opt:hover { padding-left: 18px; }
-    .icon-wrap { width: 30px; height: 30px; border-radius: 8px; display: flex; align-items: center; justify-content: center; margin-right: 12px; }
+    .custom-opt:last-child { margin-bottom: 0; }
+    .custom-opt:hover { background: #f8fafc; transform: translateX(4px); } /* Smooth slide right instead of jerky padding */
+    .custom-opt.active-opt { background: #f8fafc; border-color: #e2e8f0; }
+    .custom-opt.disabled-opt { opacity: 0.4; cursor: not-allowed; background: transparent; }
+    .custom-opt.disabled-opt:hover { transform: none; background: transparent; }
+    .icon-wrap { width: 32px; height: 32px; border-radius: 8px; display: flex; align-items: center; justify-content: center; margin-right: 14px; font-size: 1.1rem;}
 
     /* Badges */
     .badge-premium { display: inline-flex; align-items: center; padding: 6px 14px; border-radius: 50px; font-weight: 700; font-size: 0.85rem; border: 1px solid transparent; }
@@ -495,7 +555,7 @@
     .custom-scrollbar::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
     .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
 
-    /* Modal & Toast (Được tinh chỉnh cho z-index cao để đè lên mọi thứ) */
+    /* Modal & Toast */
     .toast{ position:fixed; bottom:30px; right:30px; background:#1e293b; color:white; padding:14px 24px; border-radius:12px; opacity:0; transition:all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275); z-index:99999; box-shadow: 0 15px 35px rgba(0,0,0,0.15); font-weight: 600; transform: translateY(20px);}
     .toast.show{opacity:1; transform: translateY(0);}
     .cancel-modal{ position:fixed; inset:0; background:rgba(15, 23, 42, 0.5); display:none; align-items:center; justify-content:center; z-index:9999; backdrop-filter: blur(4px);}
@@ -522,7 +582,7 @@ function setCustomSelect(val) {
     if(opt) {
         let triggerContent = document.getElementById('triggerContent');
         let clone = opt.cloneNode(true);
-        let check = clone.querySelector('.fa-check');
+        let check = clone.querySelector('.check-icon'); 
         if(check) check.remove();
         triggerContent.innerHTML = clone.innerHTML;
     }
