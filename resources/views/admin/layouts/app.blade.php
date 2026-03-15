@@ -1,155 +1,207 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <title>@yield('title', 'Trang quản trị')</title>
+  <title>@yield('title', 'Trang quản trị | PBall Store')</title>
   <meta charset="utf-8">
   <meta http-equiv="X-UA-Compatible" content="IE=edge">
   <meta name="viewport" content="width=device-width, initial-scale=1">
 
-  <!-- Main CSS -->
   <link rel="stylesheet" href="{{ asset('css/main.css') }}">
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/boxicons@latest/css/boxicons.min.css">
-  <link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.8.2/css/all.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/jquery-confirm/3.3.2/jquery-confirm.min.css">
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/sweetalert/2.1.2/sweetalert.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+  
   <style>
-    /* Thu gọn thanh header admin */
-    .admin-header-compact { min-height: 48px !important; padding-top: 0.25rem !important; padding-bottom: 0.25rem !important; }
-    .admin-header-compact .navbar-brand { font-size: 1rem; }
-    .admin-header-compact .nav-link { padding-top: 0.35rem !important; padding-bottom: 0.35rem !important; }
-    .admin-header-compact .nav-link img { width: 26px !important; height: 26px !important; }
+    /* ======================================================== */
+    /* VERCEL/STRIPE SAAS UI - PBALL STORE SYSTEM               */
+    /* ======================================================== */
+    :root {
+        --primary: #4f46e5;        /* Indigo 600 - Sang trọng, trendy */
+        --primary-hover: #4338ca;  
+        --primary-glow: rgba(79, 70, 229, 0.3);
+        --primary-light: rgba(79, 70, 229, 0.08); 
+        
+        --bg-body: #f4f4f5;        /* Zinc 100 */
+        --bg-surface: #ffffff;     
+        --text-main: #09090b;      /* Zinc 950 */
+        --text-muted: #71717a;     /* Zinc 500 */
+        --border-color: #e4e4e7;   /* Zinc 200 */
+        
+        --shadow-xs: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+        --shadow-sm: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
+        --shadow-float: 0 20px 25px -5px rgba(0, 0, 0, 0.05), 0 10px 10px -5px rgba(0, 0, 0, 0.02);
+        
+        --radius-sm: 8px;
+        --radius-md: 12px;
+        --radius-lg: 16px;
+        --transition: all 0.25s cubic-bezier(0.25, 0.8, 0.25, 1);
+    }
 
-    /* Layout: Sidebar trái, Header + Content phải — không vỡ layout */
-    .app-right-wrapper {
-      width: 100%;
-      min-width: 0;
-      box-sizing: border-box;
-      overflow-x: hidden;
+    body { 
+        font-family: 'Inter', -apple-system, sans-serif; 
+        background-color: var(--bg-body); 
+        color: var(--text-main); 
+        transition: background-color 0.3s ease; 
+        -webkit-font-smoothing: antialiased;
+        text-rendering: optimizeLegibility;
     }
-    @media (min-width: 768px) {
-      .app-right-wrapper {
-        margin-left: 250px;
-        width: calc(100% - 250px);
-      }
-      .app-right-wrapper .app-content { margin-left: 0 !important; }
-    }
-    @media (min-width: 768px) {
-      .sidebar-mini.sidenav-toggled .app-right-wrapper {
-        margin-left: 50px;
-        width: calc(100% - 50px);
-      }
-    }
-    @media (max-width: 767px) {
-      .app-right-wrapper .app-content { margin-left: 0 !important; margin-top: 10px; }
-    }
-    /* Header full trong vùng bên phải, ô thông báo + tài khoản căn phải */
-    .app-right-wrapper .admin-header-compact {
-      width: 100%;
-      min-width: 0;
-      border-radius: 0;
-      box-shadow: 0 1px 3px rgba(0,0,0,0.06);
-    }
-    .app-right-wrapper .navbar-collapse { flex-grow: 1; justify-content: flex-end; }
-    @media (min-width: 768px) {
-      .app-right-wrapper .navbar-collapse { display: flex !important; }
-    }
-    /* Khoảng cách 3 nút header: Thông báo | Đổi sáng/tối | Admin */
-    .header-nav-actions .header-nav-item { margin-left: 1.25rem; }
-    .header-nav-actions .header-nav-item:first-child { margin-left: 0; }
-    .header-nav-actions .nav-link { padding-left: 0.5rem !important; padding-right: 0.5rem !important; }
+    
+    /* CUSTOM SCROLLBAR (Tuyệt chiêu làm web mượt) */
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: #d4d4d8; border-radius: 10px; }
+    ::-webkit-scrollbar-thumb:hover { background: #a1a1aa; }
 
-    /* Chế độ tối (đêm) */
-    body.admin-dark-mode { background: #1a1d21; color: #e4e6eb; }
-    body.admin-dark-mode .app-right-wrapper .admin-header-compact { background: #242628 !important; border-color: #3e4245 !important; }
-    body.admin-dark-mode .app-right-wrapper .admin-header-compact .navbar-brand,
-    body.admin-dark-mode .app-right-wrapper .admin-header-compact .nav-link,
-    body.admin-dark-mode .app-right-wrapper .admin-header-compact .btn-link { color: #e4e6eb !important; }
-    body.admin-dark-mode .app-right-wrapper .app-content { background: #1a1d21 !important; color: #e4e6eb; }
-    body.admin-dark-mode .app-right-wrapper .card { background: #242628; border-color: #3e4245; color: #e4e6eb; }
-    body.admin-dark-mode .app-right-wrapper .card-header { background: rgba(36,38,40,0.9) !important; border-color: #3e4245; color: #e4e6eb; }
-    body.admin-dark-mode .app-right-wrapper .dropdown-menu { background: #242628; border-color: #3e4245; }
-    body.admin-dark-mode .app-right-wrapper .dropdown-item { color: #e4e6eb; }
-    body.admin-dark-mode .app-right-wrapper .dropdown-item:hover { background: #3e4245; color: #fff; }
-    /* Logo Pickleball: chế độ tối dùng màu vàng (bóng pickleball) */
-    body.admin-dark-mode .navbar-brand-logo { color: #f0c14b; }
-    body.admin-dark-mode .navbar-brand-logo svg circle[fill="var(--bs-body-bg, #fff)"],
-    body.admin-dark-mode .navbar-brand-logo svg circle[stroke] { stroke: #1a1d21; fill: #1a1d21; }
+    /* Layout */
+    .app-right-wrapper { width: 100%; min-width: 0; box-sizing: border-box; overflow-x: hidden; display: flex; flex-direction: column; min-height: 100vh; }
+    @media (min-width: 768px) { 
+        .app-right-wrapper { margin-left: 260px; width: calc(100% - 260px); } 
+        .app-right-wrapper .app-content { margin-left: 0 !important; flex-grow: 1; padding: 32px; } 
+    }
+    @media (max-width: 767px) { 
+        .app-right-wrapper .app-content { margin-left: 0 !important; flex-grow: 1; padding: 16px; } 
+    }
+
+    /* Cards & Panels */
+    .card, .premium-card { 
+        background-color: var(--bg-surface) !important; 
+        border: 1px solid var(--border-color) !important; 
+        border-radius: var(--radius-md) !important; 
+        box-shadow: var(--shadow-sm) !important; 
+        transition: var(--transition);
+    }
+    .card-header { 
+        background-color: transparent !important; 
+        color: var(--text-main) !important; 
+        border-bottom: 1px solid var(--border-color) !important; 
+        font-weight: 600; padding: 16px 24px;
+    }
+
+    /* Inputs */
+    .form-control, .form-select { border-radius: var(--radius-sm) !important; border: 1px solid var(--border-color); padding: 10px 14px; font-weight: 500; transition: var(--transition); color: var(--text-main); background: var(--bg-surface); }
+    .form-control:focus, .form-select:focus { 
+        border-color: var(--primary); 
+        box-shadow: 0 0 0 3px var(--primary-light) !important; 
+    }
+
+    /* Header Premium (Glassmorphism Siêu Thực) */
+    .premium-header { 
+        background: rgba(255, 255, 255, 0.75) !important; 
+        backdrop-filter: blur(16px) saturate(180%); -webkit-backdrop-filter: blur(16px) saturate(180%);
+        border-bottom: 1px solid var(--border-color) !important; 
+        box-shadow: none !important; height: 72px;
+    }
+    
+    /* Icon Buttons */
+    .icon-btn-header { 
+        width: 38px; height: 38px; display: flex; align-items: center; justify-content: center; 
+        border-radius: 10px; color: var(--text-muted) !important; transition: var(--transition); 
+        background: transparent; border: 1px solid transparent;
+    }
+    .icon-btn-header:hover { background-color: var(--bg-body); color: var(--text-main) !important; border-color: var(--border-color); transform: translateY(-1px); }
+    
+    .user-dropdown { border-radius: 50px; padding: 4px 12px 4px 4px; transition: var(--transition); border: 1px solid transparent; cursor: pointer; }
+    .user-dropdown:hover { background-color: var(--bg-body); border-color: var(--border-color); }
+    
+    /* Dropdown Animation */
+    .dropdown-menu { 
+        border-radius: var(--radius-md); border: 1px solid var(--border-color); 
+        box-shadow: var(--shadow-float) !important; padding: 8px; 
+        animation: dropFloat 0.2s cubic-bezier(0.25, 0.8, 0.25, 1) forwards;
+        transform-origin: top right;
+    }
+    .dropdown-item { border-radius: 6px; font-weight: 500; padding: 10px 16px; color: var(--text-main); transition: var(--transition); margin-bottom: 2px;}
+    .dropdown-item:hover { background-color: var(--bg-body); color: var(--primary) !important; transform: translateX(4px); }
+    
+    @keyframes dropFloat { from { opacity: 0; transform: scale(0.95) translateY(-10px); } to { opacity: 1; transform: scale(1) translateY(0); } }
+
+    /* ======================================================== */
+    /* DEEP DARK MODE (ĐEN NHÁM OLED CHUYÊN NGHIỆP)             */
+    /* ======================================================== */
+    body.admin-dark-mode { 
+        --bg-body: #09090b;        /* Zinc 950 */
+        --bg-surface: #18181b;     /* Zinc 900 */
+        --text-main: #f4f4f5;      /* Zinc 50 */
+        --text-muted: #a1a1aa;     /* Zinc 400 */
+        --border-color: #27272a;   /* Zinc 800 */
+        --primary-light: rgba(79, 70, 229, 0.15); 
+        --shadow-sm: 0 4px 6px -1px rgba(0, 0, 0, 0.3);
+    }
+    
+    body.admin-dark-mode ::-webkit-scrollbar-thumb { background: #3f3f46; }
+    body.admin-dark-mode ::-webkit-scrollbar-thumb:hover { background: #52525b; }
+
+    body.admin-dark-mode .premium-header { background: rgba(9, 9, 11, 0.8) !important; border-bottom: 1px solid rgba(255,255,255,0.08) !important;}
+    
+    /* Hiệu ứng viền sáng hắt từ bên trong cho thẻ Card ở Dark Mode */
+    body.admin-dark-mode .card, body.admin-dark-mode .premium-card, body.admin-dark-mode .dropdown-menu { 
+        box-shadow: inset 0 1px 0 rgba(255,255,255,0.05), 0 10px 30px rgba(0,0,0,0.5) !important; 
+        border: 1px solid var(--border-color) !important;
+    }
+    
+    body.admin-dark-mode .icon-btn-header:hover { background-color: var(--bg-surface); color: #fff !important; }
+    body.admin-dark-mode .user-dropdown:hover { background-color: var(--bg-surface); }
   </style>
 </head>
 
 <body onload="time(); initDayNight();" class="app sidebar-mini">
-  <!-- Sidebar (cố định bên trái) -->
   @include('admin.layouts.sidebar')
 
-  <!-- Vùng bên phải: chỉ có Header + Nội dung (không đè lên sidebar) -->
   <div class="app-right-wrapper">
-    <!-- Header chỉ nằm trong khoảng trắng bên phải -->
     @include('admin.layouts.header')
 
-    <!-- Main content -->
     <main class="app-content">
       @yield('content')
-      <div class="text-center" style="font-size: 13px">
-        <p><b>&copy; <script>document.write(new Date().getFullYear());</script> PBall Store</b></p>
-      </div>
     </main>
+    
+    @include('admin.layouts.footer')
   </div>
 
-  <!-- Scripts -->
   <script src="{{ asset('js/jquery-3.2.1.min.js') }}"></script>
   <script src="{{ asset('js/popper.min.js') }}"></script>
-  <script src="https://unpkg.com/boxicons@latest/dist/boxicons.js"></script>
   <script src="{{ asset('js/bootstrap.min.js') }}"></script>
   <script src="{{ asset('js/main.js') }}"></script>
   <script src="{{ asset('js/plugins/pace.min.js') }}"></script>
-  <script src="{{ asset('js/plugins/chart.js') }}"></script>
 
   @yield('scripts')
 
   <script>
     function time() {
       var today = new Date();
-      var weekday = ["Chủ Nhật", "Thứ Hai", "Thứ Ba", "Thứ Tư", "Thứ Năm", "Thứ Sáu", "Thứ Bảy"];
-      var day = weekday[today.getDay()];
-      var dd = today.getDate();
-      var mm = today.getMonth() + 1;
+      var day = ["Chủ Nhật", "Thứ Hai", "Thứ Ba", "Thứ Tư", "Thứ Năm", "Thứ Sáu", "Thứ Bảy"][today.getDay()];
+      var dd = checkTime(today.getDate());
+      var mm = checkTime(today.getMonth() + 1);
       var yyyy = today.getFullYear();
-      var h = today.getHours();
-      var m = today.getMinutes();
-      var s = today.getSeconds();
-      m = checkTime(m); s = checkTime(s);
-      var nowTime = h + " giờ " + m + " phút " + s + " giây";
-      if (dd < 10) dd = '0' + dd;
-      if (mm < 10) mm = '0' + mm;
-      var formatted = `<span class="date"> ${day}, ${dd}/${mm}/${yyyy} - ${nowTime}</span>`;
-            document.addEventListener("DOMContentLoaded", function() {
-    document.getElementById("myElement").innerHTML = "Hello!";
-});
-
+      var h = checkTime(today.getHours());
+      var m = checkTime(today.getMinutes());
+      
+      var clockEl = document.getElementById("clock");
+      if(clockEl) clockEl.innerHTML = `<span class="fw-medium text-muted" style="font-size: 0.85rem; letter-spacing: 0.5px;"><i class="fa-regular fa-calendar-days me-1"></i> ${day}, ${dd}/${mm}/${yyyy} <span class="mx-2 opacity-50">|</span> <i class="fa-regular fa-clock me-1"></i> ${h}:${m}</span>`;
       setTimeout(time, 1000);
     }
-    function checkTime(i) {
-      return (i < 10) ? "0" + i : i;
-    }
+    function checkTime(i) { return (i < 10) ? "0" + i : i; }
 
-    /* Đổi web theo ngày/đêm */
     function initDayNight() {
       var isDark = localStorage.getItem('adminDarkMode') === '1';
       if (isDark) document.body.classList.add('admin-dark-mode');
       updateDayNightIcon(isDark);
+      
       var btn = document.getElementById('toggleDayNight');
-      if (btn) btn.addEventListener('click', function() {
-        document.body.classList.toggle('admin-dark-mode');
-        var dark = document.body.classList.contains('admin-dark-mode');
-        localStorage.setItem('adminDarkMode', dark ? '1' : '0');
-        updateDayNightIcon(dark);
-      });
+      if (btn) {
+        btn.addEventListener('click', function() {
+            document.body.classList.toggle('admin-dark-mode');
+            var dark = document.body.classList.contains('admin-dark-mode');
+            localStorage.setItem('adminDarkMode', dark ? '1' : '0');
+            updateDayNightIcon(dark);
+        });
+      }
     }
+    
     function updateDayNightIcon(isDark) {
       var icon = document.getElementById('iconDayNight');
       if (!icon) return;
-      icon.className = isDark ? 'fas fa-sun' : 'fas fa-moon';
-      icon.setAttribute('title', isDark ? 'Bật chế độ sáng' : 'Đổi web theo ngày đêm');
+      icon.className = isDark ? 'fa-solid fa-sun text-warning' : 'fa-solid fa-moon text-muted';
     }
   </script>
 </body>

@@ -1,10 +1,14 @@
 <?php
 
 use Illuminate\Support\Facades\Route;
+use App\Http\Controllers\AuthController;
 use App\Http\Controllers\Admin\OrderController;
-use App\Models\OrderStatusLog;
 use App\Http\Controllers\Admin\OrderStatusController;
-use App\Http\Controllers\Admin\CategoryController; // <-- KHAI BÁO CONTROLLER DANH MỤC Ở ĐÂY
+use App\Http\Controllers\Admin\CategoryController;
+use App\Http\Controllers\Admin\ProductController;
+use App\Http\Controllers\Admin\AttributeController;
+use App\Http\Controllers\Admin\BannerController;
+use App\Http\Controllers\Client\HomeController; 
 
 /*
 |--------------------------------------------------------------------------
@@ -12,155 +16,85 @@ use App\Http\Controllers\Admin\CategoryController; // <-- KHAI BÁO CONTROLLER D
 |--------------------------------------------------------------------------
 */
 
-// Trang mặc định (home)
-Route::get('/', function () {
-    return redirect()->route('admin.dashboard');
-})->name('home');
+// ===============================================
+// AUTH (LOGIN / REGISTER / LOGOUT)
+// ===============================================
+Route::get('/login', [AuthController::class, 'showLogin'])->name('login');
+Route::post('/login', [AuthController::class, 'login']);
+
+Route::get('/register', [AuthController::class, 'showRegister'])->name('register');
+Route::post('/register', [AuthController::class, 'register']);
+
+Route::get('/logout', [AuthController::class, 'logout'])->name('logout');
 
 
-// Routes Admin (tạm thời không cần đăng nhập)
-Route::prefix('admin')->name('admin.')->group(function () {
+// ===============================================
+// ROUTE DÀNH CHO CLIENT (NGƯỜI DÙNG)
+// ===============================================
+// ĐÃ FIX: Chuyển toàn bộ logic sang HomeController để chuẩn cấu trúc MVC
+Route::get('/', [HomeController::class, 'index'])->name('home');
 
-    // Dashboard
-    Route::get('/dashboard', function () {
-        $admin = (object)[
-            'full_name' => 'Admin Test',
-            'avatar' => 'default-avatar.png'
-        ];
-        return view('admin.dashboard', compact('admin'));
-    })->name('dashboard');
 
-    // Tài khoản
-    Route::get('/accounts', function () {
-        $admin = (object)[
-            'full_name' => 'Admin Test',
-            'avatar' => 'default-avatar.png'
-        ];
-        return view('admin.accounts.index', compact('admin'));
-    })->name('accounts.index');
+// ===============================================
+// ROUTE DÀNH CHO ADMIN (QUẢN TRỊ VIÊN)
+// ===============================================
+Route::prefix('admin')->middleware('auth')->name('admin.')->group(function () {
 
-    // Khách hàng
-    Route::get('/customers', function () {
-        $admin = (object)[
-            'full_name' => 'Admin Test',
-            'avatar' => 'default-avatar.png'
-        ];
-        return view('admin.customers.index', compact('admin'));
-    })->name('customers.index');
-
-    // Sản phẩm
-    Route::get('/products', function () {
-        $admin = (object)[
-            'full_name' => 'Admin Test',
-            'avatar' => 'default-avatar.png'
-        ];
-        return view('admin.products.index', compact('admin'));
-    })->name('products.index');
-
-    // Đơn hàng
-    Route::get('/orders', function () {
-        $admin = (object)[
-            'full_name' => 'Admin Test',
-            'avatar' => 'default-avatar.png'
-        ];
-        $orders = \App\Models\Order::latest()->get();
-        return view('admin.orders.index', compact('admin', 'orders'));
-    })->name('orders.index');
-
-    // Chi tiết đơn hàng 
-    Route::get('/orders/{id}', function ($id) {
-        $admin = (object)[
-            'full_name' => 'Admin Test',
-            'avatar' => 'default-avatar.png'
-        ];
-        $order = \App\Models\Order::with(['items.product', 'statusLogs'])->findOrFail($id);
-        return view('admin.orders.show', compact('admin', 'order'));
-    })->name('orders.show');
-
-    // ===============================================
-    // ROUTE MỚI: IN VẬN ĐƠN (PDF / MÁY IN)
-    // ===============================================
-    Route::get('/orders/{id}/print', [OrderController::class, 'print'])->name('orders.print');
-
-    /*
-    |--------------------------------------------------------------------------
-    | STATUS ROUTES (ĐÃ TÁCH CONTROLLER – KHÔNG MẤT CHỨC NĂNG CŨ)
-    |--------------------------------------------------------------------------
-    */
-    Route::post('/orders/{id}/status', [OrderStatusController::class, 'updateStatus']);
-    Route::post('/orders/{id}/undo', [OrderStatusController::class, 'undo']);
-
-    // Vai trò
-    Route::get('/roles', function () {
-        $admin = (object)[
-            'full_name' => 'Admin Test',
-            'avatar' => 'default-avatar.png'
-        ];
-        return view('admin.roles.index', compact('admin'));
-    })->name('roles.index');
-
-    // Khuyến mãi
-    Route::get('/promotions', function () {
-        $admin = (object)[
-            'full_name' => 'Admin Test',
-            'avatar' => 'default-avatar.png'
-        ];
-        return view('admin.promotions.index', compact('admin'));
-    })->name('promotions.index');
-
-    // ===============================================
-    // ROUTE DANH MỤC: GỌI CHUẨN ĐẾN CONTROLLER
-    // ===============================================
-    Route::resource('categories', CategoryController::class);
-
-    // Tin tức
-    Route::get('/news', function () {
-        $admin = (object)[
-            'full_name' => 'Admin Test',
-            'avatar' => 'default-avatar.png'
-        ];
-        return view('admin.news.index', compact('admin'));
-    })->name('news.index');
-
-    // RAM
-    Route::get('/rams', function () {
-        $admin = (object)[
-            'full_name' => 'Admin Test',
-            'avatar' => 'default-avatar.png'
-        ];
-        return view('admin.rams.index', compact('admin'));
-    })->name('rams.index');
-
-    // Kho
-    Route::get('/storages', function () {
-        $admin = (object)[
-            'full_name' => 'Admin Test',
-            'avatar' => 'default-avatar.png'
-        ];
-        return view('admin.storages.index', compact('admin'));
-    })->name('storages.index');
-
-    // Màu sắc
-    Route::get('/colors', function () {
-        $admin = (object)[
-            'full_name' => 'Admin Test',
-            'avatar' => 'default-avatar.png'
-        ];
-        return view('admin.colors.index', compact('admin'));
-    })->name('colors.index');
-
-    // Profile admin
-    Route::get('/accounts/show', function () {
-        $admin = (object)[
-            'full_name' => 'Admin Test',
-            'avatar' => 'default-avatar.png'
-        ];
-        return view('admin.profile', compact('admin'));
-    })->name('profile');
-
-    // /admin → redirect dashboard
     Route::get('/', function () {
         return redirect()->route('admin.dashboard');
     });
 
+    Route::get('/dashboard', function () {
+        $admin = (object)['full_name' => 'Admin Test', 'avatar' => 'default-avatar.png'];
+        return view('admin.dashboard', compact('admin'));
+    })->name('dashboard');
+
+    Route::get('/accounts', function () {
+        $admin = (object)['full_name' => 'Admin Test', 'avatar' => 'default-avatar.png'];
+        return view('admin.accounts.index', compact('admin'));
+    })->name('accounts.index');
+
+    Route::get('/customers', function () {
+        $admin = (object)['full_name' => 'Admin Test', 'avatar' => 'default-avatar.png'];
+        return view('admin.customers.index', compact('admin'));
+    })->name('customers.index');
+
+    // SẢN PHẨM & DANH MỤC & THUỘC TÍNH
+    Route::delete('products/image/{id}', [ProductController::class, 'destroyImage'])->name('products.image.destroy');
+    Route::resource('products', ProductController::class);
+    Route::resource('categories', CategoryController::class);
+    Route::resource('attributes', AttributeController::class);
+
+    // ĐƠN HÀNG
+    Route::get('/orders', [OrderController::class, 'index'])->name('orders.index');
+    Route::get('/orders/{id}', [OrderController::class, 'show'])->name('orders.show');
+    Route::get('/orders/{id}/print', [OrderController::class, 'print'])->name('orders.print');
+    Route::post('/orders/{id}/status', [OrderStatusController::class, 'updateStatus']);
+    Route::post('/orders/{id}/undo', [OrderStatusController::class, 'undo']);
+
+    // CÁC ROUTE KHÁC
+    Route::get('/roles', function () {
+        $admin = (object)['full_name' => 'Admin Test', 'avatar' => 'default-avatar.png'];
+        return view('admin.roles.index', compact('admin'));
+    })->name('roles.index');
+
+    Route::get('/promotions', function () {
+        $admin = (object)['full_name' => 'Admin Test', 'avatar' => 'default-avatar.png'];
+        return view('admin.promotions.index', compact('admin'));
+    })->name('promotions.index');
+
+    Route::get('/news', function () {
+        $admin = (object)['full_name' => 'Admin Test', 'avatar' => 'default-avatar.png'];
+        return view('admin.news.index', compact('admin'));
+    })->name('news.index');
+
+    Route::get('/accounts/show', function () {
+        $admin = (object)['full_name' => 'Admin Test', 'avatar' => 'default-avatar.png'];
+        return view('admin.profile', compact('admin'));
+    })->name('profile');
+
+    // ===============================================
+    // QUẢN LÝ BANNER (ĐÃ FIX LỖI ROUTE NOT FOUND)
+    // ===============================================
+    Route::resource('banners', BannerController::class);
 });

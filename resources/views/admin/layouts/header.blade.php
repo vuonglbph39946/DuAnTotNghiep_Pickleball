@@ -1,58 +1,52 @@
-<header class="navbar navbar-expand-md navbar-light bg-white border-bottom shadow-sm sticky-top px-3 admin-header-compact w-100">
-    <a class="navbar-brand fw-bold text-primary py-0 d-flex align-items-center" href="{{ url('/admin') }}" title="PBall Store - Pickleball">
-        <span class="navbar-brand-logo me-2" aria-hidden="true">
-            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" width="30" height="30" fill="currentColor" role="img" aria-label="Pickleball logo">
-                <!-- Quả bóng pickleball (có lỗ) -->
-                <circle cx="16" cy="16" r="14" fill="currentColor" opacity="0.9"/>
-                <circle cx="16" cy="16" r="10" fill="transparent" stroke="var(--bs-body-bg, #fff)" stroke-width="1.5"/>
-                <circle cx="16" cy="10" r="2" fill="var(--bs-body-bg, #fff)"/>
-                <circle cx="16" cy="22" r="2" fill="var(--bs-body-bg, #fff)"/>
-                <circle cx="10" cy="16" r="2" fill="var(--bs-body-bg, #fff)"/>
-                <circle cx="22" cy="16" r="2" fill="var(--bs-body-bg, #fff)"/>
-                <circle cx="12.5" cy="12.5" r="1.5" fill="var(--bs-body-bg, #fff)"/>
-                <circle cx="19.5" cy="12.5" r="1.5" fill="var(--bs-body-bg, #fff)"/>
-                <circle cx="12.5" cy="19.5" r="1.5" fill="var(--bs-body-bg, #fff)"/>
-                <circle cx="19.5" cy="19.5" r="1.5" fill="var(--bs-body-bg, #fff)"/>
-            </svg>
-        </span>
-        PBall Store
-    </a>
+<header class="navbar navbar-expand-md sticky-top px-4 px-md-5 premium-header w-100">
+    <div class="d-flex align-items-center w-100 justify-content-between">
+        
+        <div class="d-flex align-items-center">
+            <button class="navbar-toggler border-0 shadow-none p-0 me-4" type="button" data-bs-toggle="collapse" data-bs-target="#adminNavbar">
+                <i class="fa-solid fa-bars fs-4 text-muted"></i>
+            </button>
+            <div id="clock" class="d-none d-md-block"></div>
+        </div>
 
-    <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#adminNavbar"
-        aria-controls="adminNavbar" aria-expanded="false" aria-label="Toggle navigation">
-        <span class="navbar-toggler-icon"></span>
-    </button>
-
-    <div class="collapse navbar-collapse justify-content-end" id="adminNavbar">
-        <ul class="navbar-nav align-items-center header-nav-actions">
-            <!-- Nút Thông báo -->
-            <li class="nav-item header-nav-item">
-                <a class="nav-link text-dark" href="#" title="Thông báo">
-                    <i class="fas fa-bell"></i>
+        <div class="d-flex align-items-center gap-2 gap-md-3">
+            <div class="nav-item">
+                <a class="nav-link icon-btn-header position-relative" href="#" title="Thông báo">
+                    <i class="fa-regular fa-bell fs-5"></i>
+                    <span class="position-absolute p-1 bg-danger rounded-circle border border-2 border-white" style="top: 8px; right: 8px;"></span>
                 </a>
-            </li>
+            </div>
 
-            <!-- Đổi web theo ngày/đêm (chỉ icon) -->
-            <li class="nav-item header-nav-item">
-                <button type="button" class="nav-link text-dark border-0 bg-transparent" id="toggleDayNight" title="Đổi web theo ngày đêm" aria-label="Đổi web theo ngày đêm" style="cursor:pointer;">
-                    <i class="fas fa-moon" id="iconDayNight"></i>
+            <div class="nav-item">
+                <button type="button" class="nav-link icon-btn-header border-0 bg-transparent" id="toggleDayNight" title="Giao diện">
+                    <i class="fa-regular fa-moon fs-5" id="iconDayNight"></i>
                 </button>
-            </li>
+            </div>
 
-            <!-- Tài khoản -->
-            <li class="nav-item header-nav-item dropdown">
-                <a class="nav-link dropdown-toggle text-dark" href="#" id="adminDropdown" role="button"
-                   data-bs-toggle="dropdown" aria-expanded="false">
-                    <img src="https://i.pravatar.cc/30" class="rounded-circle me-1" width="30" height="30" alt="Avatar">
-                    Admin
+            <div class="vr mx-2" style="height: 20px; align-self: center; background-color: var(--border-color);"></div>
+
+            <div class="nav-item dropdown">
+                <a class="nav-link dropdown-toggle d-flex align-items-center user-dropdown" href="#" id="adminDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                    <div class="text-end d-none d-md-block me-3">
+                        <p class="mb-0 fw-semibold text-main" style="font-size: 0.85rem; color: var(--text-main);">
+                            {{ $admin->full_name == 'Admin Test' ? 'Admin' : $admin->full_name }}
+                        </p>
+                        
+                    </div>
+                    <img src="{{ $admin->avatar != 'default-avatar.png' ? asset('storage/' . $admin->avatar) : 'https://ui-avatars.com/api/?name=Admin&background=4f46e5&color=fff&bold=true' }}" 
+                         class="rounded-circle shadow-sm" width="40" height="40" style="object-fit: cover;" alt="Avatar">
                 </a>
-                <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="adminDropdown">
-                    <li><a class="dropdown-item" href="#">Hồ sơ</a></li>
-                    <li><a class="dropdown-item" href="#">Cài đặt</a></li>
-                    <li><hr class="dropdown-divider"></li>
-                    <li><a class="dropdown-item text-danger" href="#">Đăng xuất</a></li>
+                
+                <ul class="dropdown-menu dropdown-menu-end mt-2" aria-labelledby="adminDropdown" style="min-width: 220px;">
+                    <li class="px-4 py-3 border-bottom border-light mb-1">
+                        <p class="mb-0 fw-bold" style="font-size: 0.9rem; color: var(--text-main);">{{ $admin->full_name == 'Admin Test' ? 'Quản trị viên' : $admin->full_name }}</p>
+                        <small style="font-size: 0.75rem; color: var(--text-muted);">admin@pballstore.com</small>
+                    </li>
+                    <li><a class="dropdown-item mt-2" href="{{ route('admin.profile') }}"><i class="fa-regular fa-user me-3 text-muted"></i> Hồ sơ cá nhân</a></li>
+                    <li><a class="dropdown-item" href="#"><i class="fa-solid fa-sliders me-3 text-muted"></i> Cài đặt hệ thống</a></li>
+                    <li><hr class="dropdown-divider my-2"></li>
+                    <li><a class="dropdown-item hover-danger fw-medium" href="#"><i class="fa-solid fa-arrow-right-from-bracket me-3"></i> Đăng xuất</a></li>
                 </ul>
-            </li>
-        </ul>
+            </div>
+        </div>
     </div>
 </header>
