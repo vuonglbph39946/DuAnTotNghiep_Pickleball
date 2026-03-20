@@ -1,53 +1,54 @@
-<footer class="bg-black text-white pt-16 pb-8 mt-20">
-    <div class="px-4 md:px-8">
-        
-        <div class="grid grid-cols-1 md:grid-cols-4 gap-8 mb-16">
-            
-            <div class="col-span-1">
-                <h4 class="text-sm font-bold mb-6 uppercase tracking-widest">PBALL</h4>
-                <ul class="text-[13px] text-gray-300 space-y-3 mb-8">
-                    <li class="flex items-start">
-                        <i class="fa-solid fa-location-dot mt-1 mr-3 w-4 text-center"></i> 
-                        <span>273/62 Cổ nhuế 2 , Bắc từ liêm - Hà Nội</span>
-                    </li>
-                    <li class="flex items-center">
-                        <i class="fa-solid fa-phone mr-3 w-4 text-center"></i> 
-                        <span>Hotline: 0967854619</span>
-                    </li>
-                    <li class="flex items-center">
-                        <i class="fa-solid fa-envelope mr-3 w-4 text-center"></i> 
-                        <span>Email: pballstore@gmail.com</span>
-                    </li>
+<footer class="bg3 p-t-75 p-b-32">
+    <div class="container">
+        <div class="row">
+            <div class="col-sm-6 col-lg-3 p-b-50">
+                <h4 class="stext-301 cl0 p-b-30">Danh mục</h4>
+                <ul>
+                    <li class="p-b-10"><a href="{{ url('category/vot-pickleball') }}" class="stext-107 cl7 hov-cl1 trans-04">Vợt Pickleball</a></li>
+                    <li class="p-b-10"><a href="{{ url('category/bong-pickleball') }}" class="stext-107 cl7 hov-cl1 trans-04">Bóng Pickleball</a></li>
+                    <li class="p-b-10"><a href="{{ url('category/tui-pickleball') }}" class="stext-107 cl7 hov-cl1 trans-04">Balo & Túi</a></li>
+                    <li class="p-b-10"><a href="{{ url('category/giay-pickleball') }}" class="stext-107 cl7 hov-cl1 trans-04">Giày Pickleball</a></li>
+                    <li class="p-b-10"><a href="{{ url('category/phu-kien') }}" class="stext-107 cl7 hov-cl1 trans-04">Phụ kiện thể thao</a></li>
                 </ul>
-                
-                <h4 class="text-sm font-bold mb-4 uppercase tracking-widest">Phương thức thanh toán</h4>
-                <img src="https://theme.hstatic.net/200001018890/1001366801/14/footer_logobct_img.png?v=139" alt="Đã thông báo Bộ Công Thương" class="h-10 object-contain">
             </div>
 
-            <div>
-                <h4 class="text-sm font-bold mb-6 uppercase tracking-widest">Hỗ trợ khách hàng</h4>
+            <div class="col-sm-6 col-lg-3 p-b-50">
+                <h4 class="stext-301 cl0 p-b-30">Hỗ trợ</h4>
+                <ul>
+                    <li class="p-b-10"><a href="{{ route('account.index') }}" class="stext-107 cl7 hov-cl1 trans-04">Tra cứu đơn hàng</a></li>
+                    <li class="p-b-10"><a href="#" class="stext-107 cl7 hov-cl1 trans-04">Chính sách đổi trả</a></li>
+                    <li class="p-b-10"><a href="#" class="stext-107 cl7 hov-cl1 trans-04">Chính sách vận chuyển</a></li>
+                    <li class="p-b-10"><a href="#" class="stext-107 cl7 hov-cl1 trans-04">Bảo mật thông tin</a></li>
+                </ul>
+            </div>
+
+            <div class="col-sm-6 col-lg-3 p-b-50">
+                <h4 class="stext-301 cl0 p-b-30">Liên hệ</h4>
+                <p class="stext-107 cl7 size-201">
+                    Cần hỗ trợ? Hãy ghé thăm cửa hàng tại Số 1, Phố Trịnh Văn Bô, Nam Từ Liêm, Hà Nội hoặc gọi cho chúng tôi qua số (+84) 987 654 321
+                </p>
+                <div class="p-t-27">
+                    <a href="#" class="fs-18 cl7 hov-cl1 trans-04 m-r-16"><i class="fa fa-facebook"></i></a>
+                    <a href="#" class="fs-18 cl7 hov-cl1 trans-04 m-r-16"><i class="fa fa-instagram"></i></a>
+                    <a href="#" class="fs-18 cl7 hov-cl1 trans-04 m-r-16"><i class="fa fa-youtube-play"></i></a>
+                </div>
+            </div>
+
+            
+        </div>
+
+        <div class="p-t-40">
+            <div class="flex-c-m flex-w p-b-18">
                
-            </div>
-
-            <div>
-                <h4 class="text-sm font-bold mb-6 uppercase tracking-widest">Liên kết</h4>
-                <ul class="text-[13px] text-gray-300 space-y-4 uppercase tracking-wide list-disc list-inside ml-2">
-                    
-                    <li><a href="#" class="hover:text-white transition-colors duration-300">SHOP</a></li>
-                    <li><a href="#" class="hover:text-white transition-colors duration-300">CONTACT</a></li>
-                    
-                </ul>
-            </div>
-
-            <div>
-                <h4 class="text-sm font-bold mb-6 uppercase tracking-widest">Chính sách</h4>
-            </div>
-            
+            <p class="stext-107 cl6 txt-center">
+                Copyright &copy;<script>document.write(new Date().getFullYear());</script> Bản quyền thuộc về <strong>PBall Store</strong>. All rights reserved.
+            </p>
         </div>
-
-        <div class="border-t border-gray-800 pt-6 text-center text-[12px] text-gray-400">
-            Copyright © 2026 PBall Store.
-        </div>
-        
     </div>
 </footer>
+
+<div class="btn-back-to-top" id="myBtn">
+    <span class="symbol-btn-back-to-top">
+        <i class="zmdi zmdi-chevron-up"></i>
+    </span>
+</div>

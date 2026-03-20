@@ -358,6 +358,98 @@
 </script>
 
 <style>
+    /* ===== FIX CHECKBOX BỊ LỆCH (QUAN TRỌNG) ===== */
+.custom-checkbox {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding-left: 0 !important; /* bỏ padding mặc định bootstrap */
+    margin-bottom: 6px;
+}
+
+/* bỏ position mặc định */
+.custom-checkbox .form-check-input {
+    position: static !important;
+    margin: 0 !important;
+}
+
+/* label không bị đẩy */
+.custom-checkbox .form-check-label {
+    margin: 0;
+}
+/* ===== FIX RADIO BỊ LỆCH ===== */
+.custom-radio {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding-left: 0 !important; /* bỏ padding bootstrap */
+}
+
+/* bỏ absolute */
+.custom-radio .form-check-input {
+    position: static !important;
+    margin: 0 !important;
+}
+
+/* label sát radio */
+.custom-radio .form-check-label {
+    margin: 0;
+}
+    /* ===== FIX CHỮ BỊ MỜ ===== */
+.text-main,
+label,
+.form-control,
+.form-select,
+input,
+select,
+textarea {
+    opacity: 1 !important;
+    color: #111 !important;
+}
+
+/* fix riêng select option */
+select option {
+    color: #111 !important;
+    background: #fff !important;
+}
+
+/* ===== FIX NÚT LƯU ===== */
+.btn-primary {
+    opacity: 1 !important;
+    background: #1d4ed8 !important;
+    border-color: #1d4ed8 !important;
+    color: #fff !important;
+}
+
+/* ===== FIX BẢNG BIẾN THỂ LỆCH ===== */
+.premium-table-inner {
+    table-layout: fixed !important;
+    width: 100% !important;
+}
+
+.premium-table-inner th,
+.premium-table-inner td {
+    vertical-align: middle !important;
+    text-align: center;
+}
+
+/* cột đầu căn trái */
+.premium-table-inner th:first-child,
+.premium-table-inner td:first-child {
+    text-align: left;
+}
+
+/* input trong bảng không làm lệch */
+.inner-table-input {
+    width: 100% !important;
+    min-width: 0 !important;
+    padding: 6px 8px !important;
+}
+
+/* ===== FIX CHECKBOX LỆCH ===== */
+.custom-checkbox .form-check-input {
+    margin-top: 0 !important;
+}
     /* Utilities */
     .text-main { color: var(--text-main) !important; }
     .bg-body-custom { background-color: var(--bg-body) !important; }

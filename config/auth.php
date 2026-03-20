@@ -40,6 +40,11 @@ return [
             'driver' => 'session',
             'provider' => 'users',
         ],
+        // THÊM ĐOẠN NÀY VÀO ĐỂ TẠO CỔNG RIÊNG CHO ADMIN
+        'admin' => [
+            'driver' => 'session',
+            'provider' => 'users',
+        ],
     ],
 
     /*

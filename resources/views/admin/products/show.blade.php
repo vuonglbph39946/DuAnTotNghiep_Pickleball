@@ -19,9 +19,11 @@
             <a href="{{ route('admin.products.index') }}" class="btn btn-action fw-bold shadow-sm hover-lift px-4 py-2 border" style="border-radius: 12px;">
                 <i class="fa-solid fa-arrow-left me-2"></i> Quay lại
             </a>
-            <a href="{{ route('admin.products.edit', $product->id) }}" class="btn btn-primary fw-bold shadow-primary hover-lift px-4 py-2" style="border-radius: 12px; background: var(--primary); border-color: var(--primary);">
-                <i class="fa-solid fa-pen me-2"></i> Chỉnh sửa
-            </a>
+            <a href="{{ route('admin.products.edit', $product->id) }}"
+   class="btn fw-bold shadow-primary hover-lift px-4 py-2"
+   style="border-radius: 12px; background: #0d3b66; border-color: #0d3b66; color: #fff;">
+    <i class="fa-solid fa-pen me-2"></i> Chỉnh sửa
+</a>
         </div>
     </div>
 
@@ -136,41 +138,7 @@
         {{-- CỘT PHẢI: THỐNG KÊ & HÌNH ẢNH --}}
         <div class="col-lg-4 fade-in-up" style="animation-delay: 0.3s;">
             
-            {{-- THỐNG KÊ KINH DOANH (MINI DASHBOARD) --}}
-            <div class="card premium-card border-0 shadow-sm mb-4 overflow-hidden position-relative stats-card-custom">
-                <div class="card-body p-4 position-relative z-index-1">
-                    <h6 class="fw-bold mb-4 text-uppercase tracking-wide text-main"><i class="fa-solid fa-fire me-2 text-warning"></i>Thống kê kinh doanh</h6>
-                    
-                    <div class="d-flex align-items-center mb-4">
-                        <div class="icon-box-lg bg-body-custom text-main rounded-circle d-flex align-items-center justify-content-center me-3 shadow-sm border-custom" style="width: 50px; height: 50px; font-size: 1.3rem;">
-                            <i class="fa-solid fa-cart-shopping"></i>
-                        </div>
-                        <div>
-                            <p class="mb-0 text-muted small fw-bold">Đã bán</p>
-                            <h4 class="mb-0 fw-extrabold text-main">{{ $analytics->total_sold ?? 0 }} <span class="fs-6 fw-normal text-muted">sp</span></h4>
-                        </div>
-                    </div>
-
-                    <div class="d-flex align-items-center mb-4">
-                        <div class="icon-box-lg bg-body-custom text-success rounded-circle d-flex align-items-center justify-content-center me-3 shadow-sm border-custom" style="width: 50px; height: 50px; font-size: 1.3rem;">
-                            <i class="fa-solid fa-sack-dollar"></i>
-                        </div>
-                        <div>
-                            <p class="mb-0 text-muted small fw-bold">Doanh thu</p>
-                            <h4 class="mb-0 fw-extrabold text-success">{{ number_format($analytics->revenue ?? 0, 0, ',', '.') }}<span class="fs-6 fw-normal text-muted">đ</span></h4>
-                        </div>
-                    </div>
-
-                    <div class="d-flex align-items-center pt-3 border-top" style="border-color: var(--border-color) !important;">
-                        <div class="icon-box-lg bg-body-custom text-info rounded-circle d-flex align-items-center justify-content-center me-3 border-custom" style="width: 40px; height: 40px; font-size: 1rem;">
-                            <i class="fa-solid fa-eye"></i>
-                        </div>
-                        <div>
-                            <h5 class="mb-0 fw-bold text-main">{{ $analytics->views ?? 0 }} <span class="fs-6 fw-normal text-muted">lượt xem</span></h5>
-                        </div>
-                    </div>
-                </div>
-            </div>
+            
 
             {{-- THƯ VIỆN HÌNH ẢNH --}}
             <div class="card premium-card border-0 shadow-sm mb-4">

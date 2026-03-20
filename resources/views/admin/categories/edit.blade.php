@@ -280,5 +280,21 @@
     .custom-select-options::-webkit-scrollbar { width: 6px; }
     .custom-select-options::-webkit-scrollbar-track { background: transparent; }
     .custom-select-options::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
+    /* FIX RADIO BỊ LỆCH */
+.custom-radio {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding-left: 0 !important;
+}
+
+.custom-radio .form-check-input {
+    position: static !important;
+    margin: 0 !important;
+}
+
+.custom-radio .form-check-label {
+    margin: 0;
+}
 </style>
 @endsection

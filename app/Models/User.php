@@ -32,4 +32,12 @@ class User extends Authenticatable
             'password' => 'hashed',
         ];
     }
+
+    public function addresses() {
+        return $this->hasMany(UserAddress::class, 'user_id', 'id');
+    }
+
+    public function defaultAddress() {
+        return $this->hasOne(UserAddress::class, 'user_id', 'id')->where('is_default', true);
+    }
 }

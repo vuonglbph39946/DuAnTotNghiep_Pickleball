@@ -27,9 +27,16 @@ class ProductController extends Controller
         // 1. Eager Loading để tránh lag web
         $query = Product::with(['category', 'images', 'variants.attributeValues'])->latest();
 
-        // 2. Bộ lọc theo Danh mục
+        // 2. BỘ LỌC THEO DANH MỤC (ĐÃ FIX LOGIC CHỌN CHA HIỆN CẢ CON)
         if ($request->filled('category_id')) {
-            $query->where('category_id', $request->category_id);
+            $categoryId = $request->category_id;
+            
+            // Tìm ID của danh mục được chọn VÀ tất cả các danh mục con của nó
+            $categoryIds = Category::where('id', $categoryId)
+                            ->orWhere('parent_id', $categoryId)
+                            ->pluck('id');
+                            
+            $query->whereIn('category_id', $categoryIds);
         }
 
         // 3. Bộ lọc theo Trạng thái (Đang bán / Ẩn)

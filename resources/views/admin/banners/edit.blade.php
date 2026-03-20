@@ -136,5 +136,21 @@
     .upload-box:hover { border-color: #3b82f6; }
     .hover-lift { transition: all 0.2s ease; }
     .hover-lift:hover { transform: translateY(-2px); }
+    /* FIX RADIO BỊ LỆCH */
+.custom-radio {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding-left: 0 !important;
+}
+
+.custom-radio .form-check-input {
+    position: static !important;
+    margin: 0 !important;
+}
+
+.custom-radio .form-check-label {
+    margin: 0;
+}
 </style>
 @endsection

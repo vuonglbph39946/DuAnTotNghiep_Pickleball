@@ -1,0 +1,282 @@
+<?php
+
+namespace App\Http\Controllers\Client;
+
+use App\Http\Controllers\Controller;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\DB;
+use App\Models\UserAddress;
+use App\Models\Order; 
+use App\Models\Product;
+use App\Models\ProductVariant;
+use App\Models\OrderStatusLog;
+
+class AccountController extends Controller
+{
+    // ==========================================
+    // 1. HIỂN THỊ TRANG TÀI KHOẢN (CÓ TÌM KIẾM & LỌC)
+    // ==========================================
+    public function index(Request $request)
+    {
+        /** @var \App\Models\User $user */
+        $user = Auth::user();
+        
+        $addresses = $user->addresses()->orderBy('is_default', 'desc')->orderBy('created_at', 'desc')->get();
+        
+        // BẮT ĐẦU QUERY ĐƠN HÀNG
+        $query = Order::with(['items.product', 'items.variant'])->where('user_id', $user->id);
+
+        // 1. Lọc theo trạng thái (Tab)
+        if ($request->filled('status') && $request->status !== 'all') {
+            $query->where('order_status', $request->status);
+        }
+
+        // 2. Tìm kiếm theo Mã đơn hoặc Tên sản phẩm
+        if ($request->filled('search')) {
+            $search = $request->search;
+            $query->where(function($q) use ($search) {
+                $q->where('order_code', 'like', "%{$search}%")
+                  ->orWhereHas('items.product', function($qProd) use ($search) {
+                      $qProd->where('name', 'like', "%{$search}%");
+                  });
+            });
+        }
+
+        $orders = $query->orderBy('created_at', 'desc')->get();
+
+        // Trả về view kèm theo từ khóa đang tìm để giữ lại trạng thái UI
+        $currentStatus = $request->status ?? 'all';
+        $searchTerm = $request->search ?? '';
+
+        return view('client.account.index', compact('user', 'addresses', 'orders', 'currentStatus', 'searchTerm'));
+    }
+
+    // ==========================================
+    // HÀM MỚI: XEM CHI TIẾT ĐƠN HÀNG
+    // ==========================================
+    public function showOrder($order_code)
+    {
+        $user = Auth::user();
+        
+        // Tìm đơn hàng, bắt buộc phải là của user đang đăng nhập (Bảo mật)
+        $order = Order::with(['items.product', 'items.variant', 'statusLogs' => function($q) {
+            $q->orderBy('id', 'desc');
+        }])
+        ->where('user_id', $user->id)
+        ->where('order_code', $order_code)
+        ->firstOrFail();
+
+        return view('client.account.order_detail', compact('order'));
+    }
+
+    // ==========================================
+    // 2. CẬP NHẬT THÔNG TIN CÁ NHÂN (TÊN, SĐT)
+    // ==========================================
+    public function updateProfile(Request $request)
+    {
+        $request->validate([
+            'name' => 'required|string|max:255',
+            'phone' => ['required', 'regex:/(84|0[3|5|7|8|9])+([0-9]{8})\b/'],
+        ], [
+            'name.required' => 'Vui lòng nhập họ tên.',
+            'phone.required' => 'Vui lòng nhập số điện thoại.',
+            'phone.regex' => 'Số điện thoại không hợp lệ (VD: 0987654321).'
+        ]);
+
+        /** @var \App\Models\User $user */
+        $user = Auth::user();
+
+        $user->update([
+            'name' => $request->name,
+            'phone' => $request->phone,
+        ]);
+
+        return back()->with('success_profile', 'Đã cập nhật thông tin cá nhân!');
+    }
+
+    // ==========================================
+    // 3. ĐỔI MẬT KHẨU
+    // ==========================================
+    public function updatePassword(Request $request)
+    {
+        $request->validate([
+            'current_password' => 'required',
+            'new_password' => 'required|min:6|confirmed',
+        ], [
+            'current_password.required' => 'Vui lòng nhập mật khẩu hiện tại.',
+            'new_password.required' => 'Vui lòng nhập mật khẩu mới.',
+            'new_password.min' => 'Mật khẩu mới phải có ít nhất 6 ký tự.',
+            'new_password.confirmed' => 'Xác nhận mật khẩu không khớp.'
+        ]);
+
+        /** @var \App\Models\User $user */
+        $user = Auth::user();
+
+        if (!Hash::check($request->current_password, $user->password)) {
+            return back()->withErrors(['current_password' => 'Mật khẩu hiện tại không chính xác.']);
+        }
+
+        if (Hash::check($request->new_password, $user->password)) {
+            return back()->withErrors(['new_password' => 'Mật khẩu mới không được trùng mật khẩu hiện tại.']);
+        }
+
+        $user->update([
+            'password' => Hash::make($request->new_password)
+        ]);
+
+        return back()->with('success_password', 'Đổi mật khẩu thành công!');
+    }
+
+    // ==========================================
+    // 4. THÊM ĐỊA CHỈ MỚI
+    // ==========================================
+    public function storeAddress(Request $request)
+    {
+        $request->validate([
+            'customer_name' => 'required|string|max:255',
+            'customer_phone' => ['required', 'regex:/(84|0[3|5|7|8|9])+([0-9]{8})\b/'],
+            'province_id' => 'required',
+            'district_id' => 'required',
+            'ward_id' => 'required',
+            'specific_address' => 'required|string|max:255',
+        ], [
+            'customer_name.required' => 'Vui lòng nhập tên người nhận.',
+            'customer_phone.required' => 'Vui lòng nhập SĐT người nhận.',
+            'customer_phone.regex' => 'SĐT không hợp lệ.',
+            'province_id.required' => 'Vui lòng chọn Tỉnh/Thành phố.',
+            'district_id.required' => 'Vui lòng chọn Quận/Huyện.',
+            'ward_id.required' => 'Vui lòng chọn Phường/Xã.',
+            'specific_address.required' => 'Vui lòng nhập số nhà, tên đường.',
+        ]);
+
+        /** @var \App\Models\User $user */
+        $user = Auth::user();
+        $is_default = $request->has('is_default') ? true : false;
+
+        // CHUẨN LOGIC: Nếu chưa có địa chỉ nào thì ép buộc cái đầu tiên phải là mặc định
+        if ($user->addresses()->count() == 0) {
+            $is_default = true;
+        }
+
+        DB::beginTransaction();
+        try {
+            if ($is_default) {
+                $user->addresses()->update(['is_default' => false]);
+            }
+
+            UserAddress::create([
+                'user_id' => $user->id,
+                'customer_name' => $request->customer_name,
+                'customer_phone' => $request->customer_phone,
+                'province_id' => $request->province_id,
+                'province_name' => $request->province_name, 
+                'district_id' => $request->district_id,
+                'district_name' => $request->district_name,
+                'ward_id' => $request->ward_id,
+                'ward_name' => $request->ward_name,
+                'specific_address' => $request->specific_address,
+                'is_default' => $is_default
+            ]);
+
+            DB::commit();
+            return back()->with('success_address', 'Thêm địa chỉ thành công!');
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return back()->with('error_address', 'Lỗi hệ thống, vui lòng thử lại!');
+        }
+    }
+
+    // ==========================================
+    // 5. ĐẶT ĐỊA CHỈ LÀM MẶC ĐỊNH
+    // ==========================================
+    public function setDefaultAddress($id)
+    {
+        /** @var \App\Models\User $user */
+        $user = Auth::user();
+        $address = $user->addresses()->findOrFail($id);
+
+        DB::beginTransaction();
+        try {
+            // Tắt mặc định của tất cả địa chỉ cũ, bật cho cái mới
+            $user->addresses()->update(['is_default' => false]);
+            $address->update(['is_default' => true]);
+            
+            DB::commit();
+            return back()->with('success_address', 'Đã thay đổi địa chỉ mặc định!');
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return back()->with('error_address', 'Lỗi hệ thống!');
+        }
+    }
+
+    // ==========================================
+    // 6. XÓA ĐỊA CHỈ
+    // ==========================================
+    public function destroyAddress($id)
+    {
+        /** @var \App\Models\User $user */
+        $user = Auth::user();
+        $address = $user->addresses()->findOrFail($id);
+
+        // ĐÃ FIX: Chỉ chặn xóa nếu nó là mặc định VÀ user đang có nhiều hơn 1 địa chỉ
+        if ($address->is_default && $user->addresses()->count() > 1) {
+            return back()->with('error_address', 'Không thể xóa! Vui lòng chọn địa chỉ khác làm mặc định trước khi xóa địa chỉ này.');
+        }
+
+        $address->delete();
+
+        // CHECK AN TOÀN: Đảm bảo user luôn có 1 địa chỉ mặc định nếu họ vẫn còn địa chỉ khác
+        if ($user->addresses()->count() > 0 && !$user->addresses()->where('is_default', true)->exists()) {
+            $latestAddress = $user->addresses()->latest()->first();
+            if ($latestAddress) {
+                $latestAddress->update(['is_default' => true]);
+            }
+        }
+
+        return back()->with('success_address', 'Đã xóa địa chỉ!');
+    }
+    
+    public function cancelOrder($order_code, Request $request)
+    {
+        try {
+            DB::beginTransaction();
+            $user = Auth::user();
+            $order = Order::with(['items.product', 'items.variant'])->where('order_code', $order_code)->where('user_id', $user->id)->lockForUpdate()->firstOrFail();
+
+            // CHỈ CHO PHÉP HỦY KHI ĐANG Ở TRẠNG THÁI PENDING HOẶC CONFIRMED
+            if (!in_array($order->order_status, ['pending', 'confirmed'])) {
+                DB::rollBack();
+                return back()->with('error_order', 'Không thể hủy vì đơn hàng đã bắt đầu được giao!');
+            }
+
+            // NẾU ĐƠN ĐÃ ĐƯỢC XÁC NHẬN (CONFIRMED) THÌ TRƯỚC ĐÓ ĐÃ TRỪ KHO -> NAY PHẢI CỘNG LẠI KHO
+            if ($order->order_status == 'confirmed') {
+                foreach ($order->items as $item) {
+                    if ($item->product) Product::where('id', $item->product_id)->increment('stock', $item->quantity);
+                    if ($item->product_variant_id && $item->variant) ProductVariant::where('id', $item->product_variant_id)->increment('stock', $item->quantity);
+                }
+            }
+
+            // CẬP NHẬT TRẠNG THÁI THÀNH ĐÃ HỦY CHO CẢ COD VÀ ONLINE
+            $order->update(['order_status' => 'cancelled']);
+            OrderStatusLog::create(['order_id' => $order->id, 'status' => 'cancelled', 'created_at' => now()]);
+
+            // NẾU LÀ ĐƠN THANH TOÁN ONLINE (MOMO, VNPAY...), GỬI EMAIL THÔNG BÁO HOÀN TIỀN
+            if ($order->payment_method != 'cod') {
+                try {
+                    \Illuminate\Support\Facades\Mail::to($order->customer_email)->send(new \App\Mail\RefundOrderMail($order));
+                } catch (\Exception $e) {
+                    \Log::error('Lỗi gửi mail hoàn tiền: ' . $e->getMessage());
+                }
+            }
+
+            DB::commit();
+            return back()->with('success_order', 'Hủy đơn hàng thành công!');
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return back()->with('error_order', 'Có lỗi xảy ra: ' . $e->getMessage());
+        }
+    }
+}

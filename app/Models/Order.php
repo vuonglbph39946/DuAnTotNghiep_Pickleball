@@ -7,16 +7,27 @@ use Illuminate\Database\Eloquent\Model;
 class Order extends Model
 {
     protected $table = 'orders';
+    
 
     protected $fillable = [
         'order_code',
         'user_id',
-        'address_id',
+        'customer_name',    
+        'customer_phone',   
+        'customer_email',    
+        'province_id',       
+        'province_name',     
+        'district_id',       
+        'district_name',     
+        'ward_id',           
+        'ward_name',         
+        'specific_address',  
         'total_amount',
         'shipping_fee',
         'payment_status',
         'payment_method',
-        'order_status'
+        'order_status',
+        'note',
     ];
 
     public function items()
@@ -28,10 +39,9 @@ class Order extends Model
     {
         return $this->hasMany(\App\Models\OrderStatusLog::class)->latest();
     }
-
-    // ĐÃ FIX: Hàm này chống lỗi N+1 Query (tốc độ web tăng x100 lần)
-    public function address()
+    
+    public function user()
     {
-        return $this->belongsTo(\App\Models\Address::class, 'address_id');
+        return $this->belongsTo(User::class, 'user_id');
     }
 }

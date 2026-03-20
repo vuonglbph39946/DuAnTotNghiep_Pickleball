@@ -287,5 +287,6 @@
     .custom-select-options::-webkit-scrollbar { width: 6px; }
     .custom-select-options::-webkit-scrollbar-track { background: transparent; }
     .custom-select-options::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
+    
 </style>
 @endsection

@@ -57,6 +57,16 @@
                     </thead>
                     <tbody>
                         @forelse($categories as $category)
+                            {{-- LOGIC CỘNG DỒN SỐ SẢN PHẨM CỦA DANH MỤC CHA VÀ CON --}}
+                            @php
+                                $totalProductsInParentAndChildren = $category->products->count();
+                                if($category->children) {
+                                    foreach($category->children as $childCat) {
+                                        $totalProductsInParentAndChildren += $childCat->products->count();
+                                    }
+                                }
+                            @endphp
+
                             {{-- DÒNG HIỂN THỊ DANH MỤC CHA --}}
                             <tr>
                                 <td class="ps-3 py-3"><span class="fw-bold text-dark">#{{ $category->id }}</span></td>
@@ -74,7 +84,8 @@
                                 </td>
                                 <td>
                                     <h6 class="fw-bold mb-1 text-dark text-primary">{{ $category->name }}</h6>
-                                    <span class="text-muted small">Đang có <strong>{{ $category->products->count() }}</strong> sản phẩm</span>
+                                    {{-- ĐÃ SỬA: Hiển thị tổng số lượng sản phẩm --}}
+                                    <span class="text-muted small">Đang có <strong>{{ $totalProductsInParentAndChildren }}</strong> sản phẩm</span>
                                 </td>
                                 <td>
                                     @if($category->status == 1)
@@ -198,6 +209,7 @@
 </script>
 
 <style>
+    
     .fw-extrabold { font-weight: 800; }
     .icon-box-md { width: 45px; height: 45px; border-radius: 12px; display: inline-flex; align-items: center; justify-content: center; font-size: 1.2rem; }
     .bg-primary-soft { background: #eff6ff; }
@@ -227,8 +239,26 @@
     .premium-table td:last-child { border-right: 1px solid #e2e8f0; border-top-right-radius: 12px; border-bottom-right-radius: 12px; }
     .hover-lift { transition: all 0.2s ease; border-radius: 10px; }
     .hover-lift:hover { transform: translateY(-2px); }
-    .product-img-premium { width: 60px; height: 60px; border-radius: 10px; overflow: hidden; border: 1px solid #e2e8f0; flex-shrink: 0; background: #fff; position: relative; cursor: pointer; display: inline-block;}
-    .product-img-premium img { width: 100%; height: 100%; object-fit: cover; transition: transform 0.3s ease; }
+   .product-img-premium { 
+        width: 60px; 
+        height: 60px; 
+        border-radius: 10px; 
+        overflow: hidden; 
+        border: 1px solid #e2e8f0; 
+        flex-shrink: 0; 
+        background: #fff; 
+        position: relative; 
+        cursor: pointer;
+        display: block; /* ĐÃ FIX: Đưa về block thuần, bỏ flexbox để ảnh không bị bóp */
+    }
+
+    .product-img-premium img { 
+        width: 100% !important; 
+        height: 100% !important; 
+        object-fit: cover !important; /* ĐÃ FIX: Ép cứng lấp đầy 100% khoảng trắng */
+        display: block;
+        transition: transform 0.3s ease;
+    }
     .eye-overlay { position: absolute; inset: 0; background: rgba(15, 23, 42, 0.4); display: flex; align-items: center; justify-content: center; color: #fff; opacity: 0; transition: opacity 0.3s ease; font-size: 1.2rem; }
     .product-img-premium:hover img { transform: scale(1.1); }
     .product-img-premium:hover .eye-overlay { opacity: 1; }

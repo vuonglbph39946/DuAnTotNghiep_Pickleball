@@ -1,6 +1,6 @@
-<footer class="text-center py-4 mt-auto bg-transparent premium-footer">
-    <small class="fw-medium text-muted" style="font-size: 0.8rem;">
-        &copy; <script>document.write(new Date().getFullYear());</script> 
-        <span class="fw-bold" style="color: var(--text-main);">PBall Store</span>
-    </small>
+<footer class="footer">
+  <div class="d-sm-flex justify-content-center justify-content-sm-between">
+    <span class="text-muted text-center text-sm-left d-block d-sm-inline-block">PBall Store Admin System.</span>
+    <span class="float-none float-sm-end d-block mt-1 mt-sm-0 text-center">Copyright © {{ date('Y') }}. All rights reserved.</span>
+  </div>
 </footer>

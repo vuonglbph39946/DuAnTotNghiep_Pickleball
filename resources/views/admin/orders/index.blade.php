@@ -1,228 +1,324 @@
 @extends('admin.layouts.app')
 
+@section('title', 'Quản lý đơn hàng | PBall Store')
+
 @section('content')
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-
-<div class="container-fluid px-4 py-4 premium-layout" style="background-color: #f4f7f9; font-family: 'Inter', sans-serif; min-height: 100vh;">
-
-    {{-- HEADER --}}
-    <div class="d-flex align-items-center justify-content-between mb-4 fade-in-up" style="animation-delay: 0.1s;">
-        <div>
-            <h2 class="fw-extrabold mb-1 text-dark d-flex align-items-center" style="letter-spacing: -0.5px;">
-                <div class="icon-box-md bg-gradient-primary text-white shadow-primary me-3"><i class="fa-solid fa-layer-group"></i></div>
-                Quản lý đơn hàng
-            </h2>
-            <p class="text-muted fw-medium mb-0 ms-5 ps-2">Xem và quản lý tất cả đơn hàng trên hệ thống</p>
-        </div>
-        
-        <div class="d-flex align-items-center gap-3">
-            <div class="stats-badge shadow-sm">
-                <i class="fa-solid fa-chart-pie text-primary me-2"></i>
-                <span class="text-muted fw-semibold">Tổng số:</span>
-                <span class="fs-5 fw-extrabold text-dark ms-2">{{ $totalFiltered ?? count($orders) }}</span> đơn
-            </div>
-        </div>
-    </div>
-
-    {{-- BỘ LỌC VÀ TÌM KIẾM (TÍNH NĂNG MỚI) --}}
-    <div class="card premium-card border-0 shadow-sm mb-4 fade-in-up" style="animation-delay: 0.15s;">
-        <div class="card-body p-3">
-            <form action="{{ route('admin.orders.index') }}" method="GET" class="row g-2 align-items-center">
-                <div class="col-md-5">
-                    <div class="input-group">
-                        <span class="input-group-text bg-light border-end-0 text-muted"><i class="fa-solid fa-magnifying-glass"></i></span>
-                        <input type="text" name="search" class="form-control bg-light border-start-0 ps-0 fw-medium" placeholder="Tìm mã đơn, tên hoặc SĐT khách..." value="{{ request('search') }}">
+<div class="row">
+    <div class="col-sm-12">
+        <div class="card shadow-sm border-0">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center mb-4">
+                    <div>
+                        <h4 class="card-title text-primary mb-1"><i class="mdi mdi-receipt me-2"></i> Danh Sách Đơn Hàng</h4>
+                        <p class="card-description text-muted mb-0">Quản lý, tìm kiếm và theo dõi trạng thái đơn hàng</p>
+                    </div>
+                    <div>
+                        <span class="badge badge-opacity-primary border">Tổng số: <strong>{{ $totalFiltered ?? count($orders) }}</strong> đơn</span>
                     </div>
                 </div>
-                <div class="col-md-3">
-                    <select name="status" class="form-select bg-light fw-medium text-secondary">
-                        <option value="">Tất cả trạng thái</option>
-                        <option value="pending" {{ request('status') == 'pending' ? 'selected' : '' }}>Chờ xác nhận</option>
-                        <option value="confirmed" {{ request('status') == 'confirmed' ? 'selected' : '' }}>Đã xác nhận</option>
-                        <option value="shipping" {{ request('status') == 'shipping' ? 'selected' : '' }}>Đang giao</option>
-                        <option value="completed" {{ request('status') == 'completed' ? 'selected' : '' }}>Hoàn thành</option>
-                        <option value="cancelled" {{ request('status') == 'cancelled' ? 'selected' : '' }}>Đã huỷ</option>
-                    </select>
-                </div>
-                <div class="col-md-4 d-flex gap-2">
-                    <button type="submit" class="btn btn-dark fw-bold px-4 hover-lift">Lọc</button>
-                    @if(request('search') || request('status'))
-                        <a href="{{ route('admin.orders.index') }}" class="btn btn-light fw-bold text-danger border hover-lift">Xóa lọc</a>
-                    @endif
-                </div>
-            </form>
-        </div>
-    </div>
 
-    {{-- BẢNG DỮ LIỆU ĐƠN HÀNG --}}
-    <div class="card premium-card fade-in-up" style="animation-delay: 0.2s;">
-        <div class="card-body p-0 mt-2">
-            <div class="table-responsive px-4 pb-4 pt-2">
-                <table class="table align-middle premium-table mb-0">
-                    <thead>
-                        <tr>
-                            <th style="width: 15%;">Mã Đơn & Thời gian</th>
-                            <th style="width: 25%;">Khách hàng</th>
-                            <th style="width: 15%;">Tổng tiền</th>
-                            <th class="text-center" style="width: 15%;">Thanh toán</th>
-                            <th style="width: 15%;">Trạng thái</th>
-                            <th class="text-end pe-4" style="width: 15%;">Thao tác</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        @forelse($orders as $order)
-                            {{-- ĐÃ GỠ BỎ ĐOẠN CODE CHỌC DB GÂY LỖI N+1 Ở ĐÂY --}}
+                {{-- =============================================== --}}
+                {{-- BỘ LỌC VÀ TÌM KIẾM REALTIME                     --}}
+                {{-- =============================================== --}}
+                <form action="{{ route('admin.orders.index') }}" method="GET" id="filterForm" class="mb-4">
+                    <div class="row gx-2 gy-3 align-items-center">
+                        
+                        {{-- Ô Tìm kiếm Realtime --}}
+                        <div class="col-md-5 position-relative">
+                            <div class="input-group custom-search-group">
+                                <span class="input-group-text bg-white"><i class="mdi mdi-magnify fs-5 text-dark"></i></span>
+                                <input type="text" name="search" id="searchInput" class="form-control custom-input" placeholder="Nhập mã đơn, tên, SĐT khách hàng..." value="{{ request('search') }}" autocomplete="off">
+                            </div>
+                            
+                            {{-- Hộp chứa gợi ý Realtime --}}
+                            <div id="searchSuggestions" class="position-absolute w-100 bg-white border rounded shadow d-none" style="z-index: 1000; top: 100%; max-height: 350px; overflow-y: auto;">
+                                {{-- Gợi ý sẽ được AJAX đổ vào đây --}}
+                            </div>
+                        </div>
+                        
+                        {{-- Lọc Trạng thái Đơn hàng --}}
+                        <div class="col-md-3">
+                            <select name="status" class="form-select custom-select" onchange="this.form.submit()">
+                                <option value="" class="fw-bold">-- Trạng thái đơn --</option>
+                                <option value="pending" {{ request('status') == 'pending' ? 'selected' : '' }}>Chờ xác nhận</option>
+                                <option value="confirmed" {{ request('status') == 'confirmed' ? 'selected' : '' }}>Đã xác nhận</option>
+                                <option value="shipping" {{ request('status') == 'shipping' ? 'selected' : '' }}>Đang giao</option>
+                                <option value="completed" {{ request('status') == 'completed' ? 'selected' : '' }}>Hoàn thành</option>
+                                <option value="cancelled" {{ request('status') == 'cancelled' ? 'selected' : '' }}>Đã huỷ</option>
+                            </select>
+                        </div>
+
+                        {{-- Lọc Trạng thái Thanh toán --}}
+                        <div class="col-md-3">
+                            <select name="payment_status" class="form-select custom-select" onchange="this.form.submit()">
+                                <option value="" class="fw-bold">-- Trạng thái thanh toán --</option>
+                                <option value="unpaid" {{ request('payment_status') == 'unpaid' ? 'selected' : '' }}>Chưa thanh toán</option>
+                                <option value="paid" {{ request('payment_status') == 'paid' ? 'selected' : '' }}>Đã thanh toán</option>
+                                <option value="refunded" {{ request('payment_status') == 'refunded' ? 'selected' : '' }}>Đã hoàn tiền</option>
+                            </select>
+                        </div>
+
+                        {{-- Nút Reset --}}
+                        <div class="col-md-1">
+                            <a href="{{ route('admin.orders.index') }}" class="btn btn-light w-100 text-center custom-btn-reset" title="Làm mới">
+                                <i class="mdi mdi-refresh fs-5 mx-0 text-dark"></i>
+                            </a>
+                        </div>
+                    </div>
+                </form>
+
+                {{-- =============================================== --}}
+                {{-- BẢNG DANH SÁCH ĐƠN HÀNG                         --}}
+                {{-- =============================================== --}}
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle border-top">
+                        <thead class="bg-light">
                             <tr>
-                                <td class="ps-3 py-3">
-                                    {{-- IN MÃ ĐƠN HÀNG VÀ NGÀY GIỜ --}}
-                                    <span class="fw-bold text-dark fs-6">#{{ $order->order_code ?? $order->id }}</span><br>
-                                    <span class="text-muted small fw-medium mt-1 d-inline-block">
-                                        <i class="fa-regular fa-clock me-1"></i>{{ $order->created_at->format('d/m/Y H:i') }}
-                                    </span>
-                                </td>
-
-                                <td>
-                                    <div class="d-flex align-items-center">
-                                        <div class="avatar-circle me-3 bg-primary-soft text-primary shadow-sm fw-bold text-uppercase">
-                                            {{ $order->address ? mb_substr($order->address->receiver_name, 0, 1) : 'U' }}
-                                        </div>
-                                        <div>
-                                            <h6 class="fw-bold mb-0 text-dark">{{ $order->address ? $order->address->receiver_name : 'User '.$order->user_id }}</h6>
-                                            <span class="text-muted small"><i class="fa-solid fa-phone-flip me-1"></i>{{ $order->address ? $order->address->phone : 'N/A' }}</span>
-                                        </div>
-                                    </div>
-                                </td>
-
-                                <td>
-                                    <span class="fw-extrabold text-danger" style="letter-spacing: -0.5px;">
-                                        {{ number_format($order->total_amount) }} <span class="fs-6 text-muted fw-bold">đ</span>
-                                    </span>
-                                </td>
-
-                                <td class="text-center">
-                                    {{-- TRẠNG THÁI THANH TOÁN --}}
-                                    @if($order->payment_status == 'paid')
-                                        <span class="badge-soft badge-soft-success"><i class="fa-solid fa-circle-check me-1"></i>Đã thanh toán</span>
-                                    @elseif($order->payment_status == 'unpaid')
-                                        <span class="badge-soft badge-soft-warning"><i class="fa-solid fa-circle-exclamation me-1"></i>Chưa thanh toán</span>
-                                    @else
-                                        <span class="badge-soft badge-soft-secondary">{{ ucfirst($order->payment_status) }}</span>
-                                    @endif
+                                <th>Mã Đơn</th>
+                                <th>Khách Hàng</th>
+                                <th>Tổng Giá Trị</th>
+                                <th>Trạng Thái</th>
+                                <th>Thanh Toán</th>
+                                <th class="text-center">Hành Động</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @forelse($orders as $order)
+                                <tr>
+                                    {{-- Cột 1: Mã Đơn --}}
+                                    <td>
+                                        <strong class="text-primary">#{{ $order->order_code ?? $order->id }}</strong><br>
+                                        <small class="text-muted"><i class="mdi mdi-clock-outline me-1"></i>{{ $order->created_at ? $order->created_at->format('d/m/Y H:i') : '' }}</small>
+                                    </td>
                                     
-                                    {{-- PHƯƠNG THỨC THANH TOÁN --}}
-                                    <div class="mt-2">
-                                        <span class="badge bg-light text-dark border px-2 py-1 shadow-sm" style="font-size: 0.7rem;">
-                                            @if(strtolower($order->payment_method) == 'momo')
-                                                <i class="fa-solid fa-wallet text-pink-500 me-1" style="color: #a50064;"></i> MOMO
-                                            @elseif(strtolower($order->payment_method) == 'vnpay')
-                                                <i class="fa-solid fa-credit-card text-primary me-1"></i> VNPAY
+                                    {{-- Cột 2: Khách Hàng --}}
+                                    <td>
+                                        <div class="fw-bold text-dark">{{ $order->customer_name }}</div>
+                                        <div class="text-muted small mt-1"><i class="mdi mdi-phone me-1"></i>{{ $order->customer_phone }}</div>
+                                    </td>
+                                    
+                                    {{-- Cột 3: Tổng Giá Trị --}}
+                                    <td>
+                                        <strong class="text-danger fs-6">{{ number_format($order->total_amount) }} VNĐ</strong>
+                                    </td>
+                                    
+                                    {{-- Cột 4: Trạng Thái Đơn Hàng --}}
+                                    <td>
+                                        @if($order->order_status == 'pending')
+                                            <span class="badge badge-opacity-warning border border-warning">Chờ xác nhận</span>
+                                        @elseif($order->order_status == 'confirmed')
+                                            <span class="badge badge-opacity-info border border-info">Đã xác nhận</span>
+                                        @elseif($order->order_status == 'shipping')
+                                            <span class="badge badge-opacity-primary border border-primary">Đang giao</span>
+                                        @elseif($order->order_status == 'completed')
+                                            <span class="badge badge-opacity-success border border-success">Hoàn thành</span>
+                                        @elseif($order->order_status == 'cancelled')
+                                            <span class="badge badge-opacity-danger border border-danger">Đã huỷ</span>
+                                        @else
+                                            <span class="badge badge-opacity-dark border">{{ ucfirst($order->order_status) }}</span>
+                                        @endif
+                                    </td>
+                                    
+                                    {{-- Cột 5: Trạng Thái & Phương Thức Thanh Toán --}}
+                                    <td>
+                                        <div class="mb-1">
+                                            @if($order->payment_status == 'paid')
+                                                <span class="badge bg-success text-white"><i class="mdi mdi-check-circle-outline me-1"></i>Đã thanh toán</span>
+                                            @elseif($order->payment_status == 'refunded')
+                                                <span class="badge bg-secondary text-white"><i class="mdi mdi-backup-restore me-1"></i>Đã hoàn tiền</span>
                                             @else
-                                                <i class="fa-solid fa-truck text-secondary me-1"></i> THU HỘ (COD)
+                                                <span class="badge bg-warning text-dark"><i class="mdi mdi-clock-outline me-1"></i>Chưa thanh toán</span>
                                             @endif
-                                        </span>
-                                    </div>
-                                </td>
-
-                                <td>
-                                    <span class="badge-premium {{ $order->order_status }} shadow-sm">
-                                        <span class="status-dot"></span> {{ ucfirst($order->order_status) }}
-                                    </span>
-                                </td>
-
-                                <td class="text-end pe-3">
-                                    <a href="{{ url('/admin/orders/'.$order->id) }}" class="btn btn-light btn-sm fw-bold text-primary border shadow-sm hover-lift px-3">
-                                        <i class="fa-solid fa-eye me-1"></i> Chi tiết
-                                    </a>
-                                </td>
-                            </tr>
-                        @empty
-                            <tr>
-                                <td colspan="6" class="text-center py-5">
-                                    <div class="empty-state">
-                                        <i class="fa-solid fa-box-open fs-1 text-muted opacity-25 mb-3"></i>
-                                        <h5 class="fw-bold text-dark">Chưa có đơn hàng nào</h5>
-                                        <p class="text-muted">Hệ thống chưa ghi nhận hoặc không tìm thấy đơn hàng phù hợp.</p>
-                                    </div>
-                                </td>
-                            </tr>
-                        @endforelse
-                    </tbody>
-                </table>
-            </div>
-            
-            @if(method_exists($orders, 'links') && $orders->hasPages())
-                <div class="card-footer bg-transparent border-0 px-4 pb-4">
-                    {{ $orders->links('pagination::bootstrap-5') }}
+                                        </div>
+                                        
+                                        {{-- THÊM MỚI: Phương thức thanh toán --}}
+                                        <div class="small fw-bold mt-1">
+                                            @if($order->payment_method == 'momo')
+                                                <span style="color: #a50064;"><i class="mdi mdi-wallet me-1"></i>MoMo</span>
+                                            @elseif($order->payment_method == 'vnpay')
+                                                <span class="text-primary"><i class="mdi mdi-credit-card me-1"></i>VNPay</span>
+                                            @elseif($order->payment_method == 'vietqr')
+                                                <span class="text-info"><i class="mdi mdi-qrcode me-1"></i>VietQR</span>
+                                            @else
+                                                <span class="text-secondary"><i class="mdi mdi-cash me-1"></i>COD</span>
+                                            @endif
+                                        </div>
+                                    </td>
+                                    
+                                    {{-- Cột 6: Hành Động --}}
+                                    <td class="text-center">
+                                        <a href="{{ url('/admin/orders/'.$order->id) }}" class="btn btn-sm btn-primary text-white py-1 px-2 rounded">
+                                            <i class="mdi mdi-eye"></i> Chi tiết
+                                        </a>
+                                    </td>
+                                </tr>
+                            @empty
+                                {{-- Khi bảng rỗng hoặc tìm không thấy --}}
+                                <tr class="empty-state-row">
+                                    <td colspan="6" class="text-center py-5">
+                                        <i class="mdi mdi-text-box-search-outline text-muted" style="font-size: 50px;"></i>
+                                        <h5 class="mt-2 text-dark">Không tìm thấy đơn hàng nào!</h5>
+                                        <p class="text-muted">Thử thay đổi từ khóa tìm kiếm hoặc làm mới lại bộ lọc.</p>
+                                        <a href="{{ route('admin.orders.index') }}" class="btn btn-light border mt-2"><i class="mdi mdi-refresh"></i> Tải lại trang</a>
+                                    </td>
+                                </tr>
+                            @endforelse
+                        </tbody>
+                    </table>
                 </div>
-            @endif
+                
+                {{-- Phân trang --}}
+                @if(method_exists($orders, 'links') && $orders->hasPages())
+                    <div class="mt-4 d-flex justify-content-end">
+                        {{ $orders->links('pagination::bootstrap-5') }}
+                    </div>
+                @endif
+                
+            </div>
         </div>
     </div>
-
 </div>
 
-{{-- ================= SUPER CSS UI/UX LỘT XÁC ================= --}}
 <style>
-    /* Typography & Utils */
-    .fw-extrabold { font-weight: 800; }
-    .icon-box-md { width: 45px; height: 45px; border-radius: 12px; display: inline-flex; align-items: center; justify-content: center; font-size: 1.2rem; }
-    .bg-primary-soft { background: #eff6ff; }
-    .bg-gradient-primary { background: linear-gradient(135deg, #3b82f6, #2563eb); }
-    .shadow-primary { box-shadow: 0 8px 20px rgba(37, 99, 235, 0.3); }
-
-    /* Layout & Cards */
-    .premium-card {
-        border-radius: 20px; border: 1px solid rgba(0,0,0,0.03); background: #fff;
-        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.03);
-        transition: transform 0.3s ease, box-shadow 0.3s ease;
-    }
-    .stats-badge {
-        background: #fff; border: 1px solid #e2e8f0; border-radius: 12px;
-        padding: 10px 20px; display: inline-flex; align-items: center;
-    }
-
-    .fade-in-up { animation: fadeInUp 0.5s ease-out forwards; opacity: 0; transform: translateY(15px); }
-    @keyframes fadeInUp { to { opacity: 1; transform: translateY(0); } }
-
-    /* Avatar & Badges */
-    .avatar-circle { width: 40px; height: 40px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 1rem; }
+    /* CSS TRỊ BỆNH MỜ ÁM CỦA TEMPLATE STAR ADMIN */
     
-    .badge-soft { padding: 6px 12px; border-radius: 8px; font-weight: 600; font-size: 0.8rem; }
-    .badge-soft-warning { background: #fffbeb; color: #b45309; border: 1px solid #fde68a;}
-    .badge-soft-success { background: #f0fdf4; color: #166534; border: 1px solid #bbf7d0;}
-    .badge-soft-secondary { background: #f8fafc; color: #475569; border: 1px solid #e2e8f0;}
+    /* Ô Input Tìm Kiếm */
+    #filterForm .custom-input {
+        border: 1px solid #ced4da !important;
+        border-left: none !important;
+        background-color: #ffffff !important;
+        color: #212529 !important;
+        font-weight: 500;
+        height: 44px;
+    }
+    #filterForm .custom-input::placeholder {
+        color: #6c757d !important;
+        opacity: 0.8;
+    }
+    #filterForm .input-group-text {
+        border: 1px solid #ced4da !important;
+        border-right: none !important;
+        background-color: #ffffff !important;
+    }
 
-    /* Status Badges Premium (Tái sử dụng từ trang show) */
-    .badge-premium { display: inline-flex; align-items: center; padding: 6px 14px; border-radius: 50px; font-weight: 700; font-size: 0.85rem; border: 1px solid transparent; }
-    .status-dot { width: 8px; height: 8px; border-radius: 50%; margin-right: 8px; }
-    .badge-premium.pending { background: #f8fafc; color: #475569; border-color: #e2e8f0; }
-    .badge-premium.pending .status-dot { background: #64748b; }
-    .badge-premium.confirmed { background: #eff6ff; color: #1d4ed8; border-color: #bfdbfe; }
-    .badge-premium.confirmed .status-dot { background: #2563eb; box-shadow: 0 0 6px #2563eb; }
-    .badge-premium.shipping { background: #fffbeb; color: #b45309; border-color: #fde68a; }
-    .badge-premium.shipping .status-dot { background: #f59e0b; box-shadow: 0 0 6px #f59e0b; }
-    .badge-premium.completed { background: #f0fdf4; color: #15803d; border-color: #bbf7d0; }
-    .badge-premium.completed .status-dot { background: #16a34a; box-shadow: 0 0 6px #16a34a;}
-    .badge-premium.cancelled { background: #fef2f2; color: #b91c1c; border-color: #fecaca; }
-    .badge-premium.cancelled .status-dot { background: #ef4444; }
+    /* Dropdown Select */
+    #filterForm .custom-select {
+        border: 1px solid #ced4da !important;
+        background-color: #ffffff !important;
+        color: #212529 !important;
+        font-weight: 500;
+        height: 44px;
+        box-shadow: none !important;
+    }
 
-    /* Bảng Premium Tách Rời (Floating Rows) */
-    .premium-table { border-collapse: separate; border-spacing: 0 10px; table-layout: fixed !important; width: 100% !important; min-width: 900px !important; }
-    .premium-table th { font-weight: 700; text-transform: uppercase; font-size: 0.75rem; letter-spacing: 1px; padding-bottom: 10px; border: none; background: transparent; color: #64748b;}
-    .premium-table tbody tr { background: #fff; transition: transform 0.2s, box-shadow 0.2s; border-radius: 12px; }
-    .premium-table tbody tr:hover { transform: translateY(-2px); box-shadow: 0 10px 25px rgba(0,0,0,0.05); border-radius: 12px; background: #fff;}
-    .premium-table td { border-top: 1px solid #e2e8f0; border-bottom: 1px solid #e2e8f0; vertical-align: middle;}
-    .premium-table td:first-child { border-left: 1px solid #e2e8f0; border-top-left-radius: 12px; border-bottom-left-radius: 12px; }
-    .premium-table td:last-child { border-right: 1px solid #e2e8f0; border-top-right-radius: 12px; border-bottom-right-radius: 12px; }
+    /* Nút Reset */
+    #filterForm .custom-btn-reset {
+        border: 1px solid #ced4da !important;
+        background-color: #f8f9fa !important;
+        height: 44px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+    #filterForm .custom-btn-reset:hover {
+        background-color: #e2e6ea !important;
+    }
 
-    /* Nút bấm hover */
-    .hover-lift { transition: all 0.2s ease; border-radius: 10px; }
-    .hover-lift:hover { transform: translateY(-2px); }
-    
-    /* Làm mượt thanh cuộn ngang khi màn hình nhỏ */
-    .table-responsive::-webkit-scrollbar { height: 6px; }
-    .table-responsive::-webkit-scrollbar-track { background: #f1f5f9; border-radius: 10px;}
-    .table-responsive::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
-    .table-responsive::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+    /* Hiệu ứng khi Focus (Bấm vào) */
+    #filterForm .custom-input:focus, 
+    #filterForm .custom-select:focus {
+        border-color: #4b49ac !important;
+        box-shadow: 0 0 0 0.2rem rgba(75, 73, 172, 0.25) !important;
+    }
+    #filterForm .custom-input:focus + .input-group-text {
+        border-color: #4b49ac !important;
+    }
+
+    .suggestion-item:hover { background-color: #f8f9fa; }
+    .badge { font-weight: 600; padding: 6px 10px; }
 </style>
+
 @endsection
+
+@push('scripts')
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script>
+    $(document).ready(function() {
+        let searchTimer;
+        
+        // Bắt sự kiện người dùng gõ phím vào ô tìm kiếm
+        $('#searchInput').on('input', function() {
+            clearTimeout(searchTimer);
+            let query = $(this).val().trim();
+            let suggestBox = $('#searchSuggestions');
+            
+            if (query.length >= 2) {
+                // Đang gõ thì hiện trạng thái Loading
+                suggestBox.removeClass('d-none').html('<div class="p-3 text-center text-muted"><i class="mdi mdi-loading mdi-spin me-2"></i>Đang tìm kiếm...</div>');
+                
+                // Đợi 400ms sau khi ngừng gõ mới gọi dữ liệu
+                searchTimer = setTimeout(function() {
+                    $.ajax({
+                        url: "{{ route('admin.orders.index') }}",
+                        data: { search: query },
+                        success: function(res) {
+                            let suggestionsHTML = '';
+                            let validRows = 0;
+                            
+                            $(res).find('.table tbody tr').each(function() {
+                                if ($(this).hasClass('empty-state-row')) return; 
+                                
+                                if (validRows < 5) {
+                                    let orderCode = $(this).find('td:eq(0) strong').text().trim();
+                                    let customerName = $(this).find('td:eq(1) .fw-bold').text().trim();
+                                    let phone = $(this).find('td:eq(1) .text-muted').text().trim();
+                                    let amount = $(this).find('td:eq(2) strong').text().trim();
+                                    
+                                    suggestionsHTML += `
+                                        <div class="p-3 border-bottom suggestion-item" style="cursor: pointer;" onclick="submitSearch('${orderCode.replace('#', '')}')">
+                                            <div class="d-flex justify-content-between align-items-center">
+                                                <div>
+                                                    <span class="badge badge-opacity-primary border me-2">${orderCode}</span>
+                                                    <span class="fw-bold text-dark">${customerName}</span>
+                                                </div>
+                                                <span class="text-danger fw-bold">${amount}</span>
+                                            </div>
+                                            <div class="text-muted small mt-1"><i class="mdi mdi-phone me-1"></i>${phone}</div>
+                                        </div>
+                                    `;
+                                    validRows++;
+                                }
+                            });
+                            
+                            if (suggestionsHTML !== '') {
+                                suggestBox.html(suggestionsHTML);
+                            } else {
+                                suggestBox.html('<div class="p-4 text-center text-danger"><i class="mdi mdi-alert-circle-outline fs-4 d-block mb-1"></i> Không tìm thấy đơn hàng nào!</div>');
+                            }
+                        },
+                        error: function() {
+                            suggestBox.html('<div class="p-3 text-center text-muted">Lỗi kết nối khi tải gợi ý</div>');
+                        }
+                    });
+                }, 400); 
+            } else {
+                suggestBox.addClass('d-none');
+            }
+        });
+
+        // Click vào 1 gợi ý -> Đẩy chữ lên ô tìm kiếm và Submit
+        window.submitSearch = function(val) {
+            $('#searchInput').val(val);
+            $('#searchSuggestions').addClass('d-none');
+            $('#filterForm').submit();
+        };
+
+        // Bấm ra ngoài khoảng trắng thì tự động ẩn cái hộp gợi ý đi
+        $(document).on('click', function(e) {
+            if (!$(e.target).closest('.position-relative').length) {
+                $('#searchSuggestions').addClass('d-none');
+            }
+        });
+    });
+</script>
+@endpush

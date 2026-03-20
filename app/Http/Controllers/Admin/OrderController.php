@@ -15,30 +15,26 @@ class OrderController extends Controller
             'avatar' => 'default-avatar.png'
         ];
 
-        // 1. Dùng with('address') để chặn lỗi N+1 Query
-        $query = Order::with('address')->latest();
+        // ĐÃ FIX 1: Không dùng with('address') nữa vì dữ liệu nằm thẳng ở bảng orders
+        $query = Order::latest();
 
-        // 2. Bộ lọc trạng thái
         if ($request->filled('status')) {
             $query->where('order_status', $request->status);
         }
 
-        // 3. Tìm kiếm bằng mã đơn, ID, tên hoặc số điện thoại
         if ($request->filled('search')) {
             $search = $request->search;
             $query->where(function($q) use ($search) {
+                // ĐÃ FIX 2: Tìm thẳng vào cột của orders, không dùng whereHas
                 $q->where('order_code', 'like', "%{$search}%")
                   ->orWhere('id', 'like', "%{$search}%")
-                  ->orWhereHas('address', function($subQ) use ($search) {
-                      $subQ->where('receiver_name', 'like', "%{$search}%")
-                           ->orWhere('phone', 'like', "%{$search}%");
-                  });
+                  ->orWhere('customer_name', 'like', "%{$search}%")
+                  ->orWhere('customer_phone', 'like', "%{$search}%");
             });
         }
 
-        // 4. Phân trang 15 đơn/trang
         $orders = $query->paginate(15)->withQueryString();
-        $totalFiltered = $orders->total(); // Đếm số đơn để hiện lên Badge
+        $totalFiltered = $orders->total(); 
 
         return view('admin.orders.index', compact('orders', 'totalFiltered', 'admin'));
     }
@@ -50,8 +46,8 @@ class OrderController extends Controller
             'avatar' => 'default-avatar.png'
         ];
 
-        // ĐÃ FIX: Phải gọi items.variant để ra giao diện hiện được màu/size
-        $order = Order::with(['items.product', 'items.variant', 'address', 'statusLogs' => function($q) {
+        // ĐÃ FIX 3: Gỡ bỏ 'address' ra khỏi mảng eager loading
+        $order = Order::with(['items.product', 'items.variant', 'statusLogs' => function($q) {
             $q->orderBy('id', 'desc');
         }])->findOrFail($id);
         
@@ -69,10 +65,9 @@ class OrderController extends Controller
 
     public function print($id)
     {
-        // Eager loading đầy đủ dữ liệu để in hóa đơn không bị lỗi
-        $order = Order::with(['items.product', 'items.variant', 'address'])->findOrFail($id);
-        $address = $order->address; 
-        
-        return view('admin.orders.print', compact('order', 'address'));
+        $order = Order::with(['items.product', 'items.variant'])->findOrFail($id);
+        return view('admin.orders.print', compact('order'));
     }
+
+    
 }
