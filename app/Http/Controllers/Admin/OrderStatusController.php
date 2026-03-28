@@ -14,12 +14,6 @@ class OrderStatusController extends Controller
 {
     private $steps = ['pending', 'confirmed', 'shipping', 'completed'];
 
-    // =========================================================
-    // 1. HÀM CẬP NHẬT TRẠNG THÁI (ĐƠN HÀNG & THANH TOÁN)
-    // =========================================================
-   // =========================================================
-    // 1. HÀM CẬP NHẬT TRẠNG THÁI (ĐƠN HÀNG & THANH TOÁN)
-    // =========================================================
     public function updateStatus(Request $request, $id)
     {
         try {
@@ -57,9 +51,9 @@ class OrderStatusController extends Controller
                     $newIndex = array_search($newStatus, $this->steps);
 
                     if ($newIndex !== false && $currentIndex !== false) {
-                        if ($newIndex < $currentIndex) {
+                        if ($newIndex <= $currentIndex) {
                             DB::rollBack();
-                            return $request->wantsJson() ? response()->json(['error' => 'Không thể lùi trạng thái đơn hàng.'], 400) : back()->with('error', 'Không thể lùi trạng thái đơn hàng.');
+                            return $request->wantsJson() ? response()->json(['error' => 'Không thể lùi hoặc lưu lại trạng thái cũ.'], 400) : back()->with('error', 'Không thể lùi trạng thái đơn hàng.');
                         }
                         if ($newIndex > $currentIndex + 1) {
                             DB::rollBack();
@@ -98,31 +92,41 @@ class OrderStatusController extends Controller
             }
 
             // --------------------------------------------------
-            // B. XỬ LÝ LOGIC TRẠNG THÁI THANH TOÁN (LUẬT MỚI)
+            // B. XỬ LÝ LOGIC TRẠNG THÁI THANH TOÁN
             // --------------------------------------------------
             if ($oldPaymentStatus !== $newPaymentStatus) {
-                // 1. Không cho đi lùi (Đã TT -> Chưa TT)
                 if ($oldPaymentStatus === 'paid' && $newPaymentStatus === 'unpaid') {
                     DB::rollBack();
                     return $request->wantsJson() ? response()->json(['error' => 'Không thể lùi từ Đã thanh toán về Chưa thanh toán!'], 400) : back()->with('error', 'Lỗi trạng thái thanh toán!');
                 }
                 
-                // 2. Đã hoàn tiền thì cấm đụng vào nữa
                 if ($oldPaymentStatus === 'refunded') {
                     DB::rollBack();
                     return $request->wantsJson() ? response()->json(['error' => 'Đơn hàng đã hoàn tiền, không thể thay đổi nữa!'], 400) : back()->with('error', 'Lỗi trạng thái thanh toán!');
                 }
 
-                // 3. Đơn COD cấm chọn Hoàn tiền
                 if ($order->payment_method === 'cod' && $newPaymentStatus === 'refunded') {
                     DB::rollBack();
                     return $request->wantsJson() ? response()->json(['error' => 'Đơn COD không có chức năng Hoàn tiền!'], 400) : back()->with('error', 'Lỗi trạng thái thanh toán!');
                 }
 
-                // 4. Hủy COD cấm cập nhật thanh toán
-                if ($order->payment_method === 'cod' && $oldStatus === 'cancelled') {
+                if (in_array($oldStatus, ['cancelled', 'returned'])) {
+                    $isValidRefund = ($oldPaymentStatus === 'paid' && $newPaymentStatus === 'refunded' && $order->payment_method !== 'cod');
+                    if (!$isValidRefund) {
+                        DB::rollBack();
+                        return $request->wantsJson() ? response()->json(['error' => 'Đơn hàng đã hủy, chỉ được phép cập nhật Hoàn tiền cho đơn Online đã thanh toán!'], 400) : back()->with('error', 'Lỗi trạng thái thanh toán!');
+                    }
+                }
+
+                // Không cho hoàn tiền nếu Đơn hàng đang giao hoặc đã giao
+                if ($newPaymentStatus === 'refunded' && in_array($oldStatus, ['shipping', 'completed'])) {
                     DB::rollBack();
-                    return $request->wantsJson() ? response()->json(['error' => 'Đơn COD đã hủy không thể cập nhật thanh toán!'], 400) : back()->with('error', 'Lỗi trạng thái thanh toán!');
+                    return $request->wantsJson() ? response()->json(['error' => 'Không thể Hoàn tiền khi đơn hàng đang được giao hoặc đã hoàn thành!'], 400) : back()->with('error', 'Lỗi trạng thái thanh toán!');
+                }
+
+                if (in_array($order->payment_method, ['vnpay', 'momo']) && $oldPaymentStatus === 'unpaid' && $newPaymentStatus === 'paid') {
+                    DB::rollBack();
+                    return $request->wantsJson() ? response()->json(['error' => 'Giao dịch Online phải do hệ thống tự động xác nhận, Admin không được tự đổi!'], 400) : back()->with('error', 'Lỗi thao tác thanh toán!');
                 }
             }
 
@@ -139,6 +143,4 @@ class OrderStatusController extends Controller
             return $request->wantsJson() ? response()->json(['error' => 'Lỗi: ' . $e->getMessage()], 500) : back()->with('error', 'Lỗi: ' . $e->getMessage());
         }
     }
-
-    
 }

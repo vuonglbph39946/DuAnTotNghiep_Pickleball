@@ -20,15 +20,24 @@
         'returned' => 'Trả hàng'
     ];
 
-    // LOGIC ĐÓNG BĂNG ĐƠN HÀNG VÀ THANH TOÁN (TÁCH BIỆT)
+    // ================= LOGIC ĐÓNG BĂNG ĐƠN HÀNG VÀ THANH TOÁN =================
     $isOrderFrozen = in_array($order->order_status, ['cancelled', 'completed', 'returned']);
     
     $isPaymentFrozen = false;
     if ($order->payment_status == 'refunded') {
-        $isPaymentFrozen = true; // Đã hoàn tiền là khóa vĩnh viễn
-    }
-    if ($order->payment_method == 'cod' && in_array($order->order_status, ['cancelled', 'returned'])) {
-        $isPaymentFrozen = true; // COD Hủy/Trả là khóa không cho update thanh toán nữa
+        $isPaymentFrozen = true; 
+    } elseif ($order->payment_status == 'paid' && $order->payment_method == 'cod') {
+        // Đơn COD thu tiền xong -> Khóa vĩnh viễn không cho sửa
+        $isPaymentFrozen = true; 
+    } elseif ($order->payment_status == 'paid' && in_array($order->order_status, ['shipping', 'completed'])) {
+        // Đơn Online đã thanh toán & Đang/Đã giao -> Khóa vĩnh viễn (Vì cấm hoàn tiền lúc này)
+        $isPaymentFrozen = true; 
+    } elseif (in_array($order->order_status, ['cancelled', 'returned'])) {
+        if ($order->payment_status == 'paid' && $order->payment_method != 'cod') {
+            $isPaymentFrozen = false; 
+        } else {
+            $isPaymentFrozen = true; 
+        }
     }
 @endphp
 
@@ -235,19 +244,22 @@
                         {{-- Select Trạng thái đơn --}}
                         <div class="col-6 mb-2">
                             <label class="small fw-bold text-muted mb-1">Trạng thái đơn</label>
-                            <select id="statusSelect" class="form-select custom-select-fix shadow-none fw-semibold" style="font-size: 0.85rem;" {{ $isOrderFrozen ? 'disabled' : '' }}>
+                            <select id="statusSelect" onchange="enableSaveOrderBtn()" class="form-select custom-select-fix shadow-none fw-semibold" style="font-size: 0.85rem;" {{ $isOrderFrozen ? 'disabled' : '' }}>
                                 @foreach(['pending','confirmed','shipping','completed','cancelled'] as $st)
                                     @php
                                         $disabled = 'disabled'; 
                                         if (!$isOrderFrozen) {
-                                            if ($st === $current) { 
-                                                $disabled = ''; 
-                                            } elseif ($st === 'cancelled') {
+                                            if ($st === 'cancelled') {
                                                 if ($current !== 'shipping') $disabled = ''; 
                                             } else {
                                                 $stIndex = array_search($st, $steps);
+                                                // Mở khóa cho bước tiếp theo
                                                 if ($stIndex !== false && $stIndex === $currentIndex + 1) $disabled = ''; 
                                             }
+                                        }
+                                        // Vô hiệu hóa tùy chọn hiện tại để không cho bấm lại
+                                        if ($st === $current) {
+                                            $disabled = 'disabled';
                                         }
                                     @endphp
                                     <option value="{{ $st }}" {{ $current==$st?'selected':'' }} {{ $disabled }}>{{ $statusLabels[$st] ?? ucfirst($st) }}</option>
@@ -255,34 +267,41 @@
                             </select>
                         </div>
 
-                        {{-- Select Thanh toán (ĐÃ FIX LOGIC 1 CHIỀU) --}}
+                        {{-- Select Thanh toán --}}
                         <div class="col-6 mb-2">
                             <label class="small fw-bold text-muted mb-1">Thanh toán</label>
-                            <select id="paymentStatusSelect" class="form-select custom-select-fix shadow-none fw-semibold" style="font-size: 0.85rem;" {{ $isPaymentFrozen ? 'disabled' : '' }}>
+                            <select id="paymentStatusSelect" onchange="enableSavePaymentBtn()" class="form-select custom-select-fix shadow-none fw-semibold" style="font-size: 0.85rem;" {{ $isPaymentFrozen ? 'disabled' : '' }}>
                                 
-                                <option value="unpaid" {{ $order->payment_status == 'unpaid' ? 'selected' : '' }} {{ $order->payment_status != 'unpaid' ? 'disabled' : '' }}>⏳ Chưa Thanh Toán</option>
+                                <option value="unpaid" {{ $order->payment_status == 'unpaid' ? 'selected disabled' : 'disabled' }}>⏳ Chưa Thanh Toán</option>
                                 
-                                <option value="paid" {{ $order->payment_status == 'paid' ? 'selected' : '' }} {{ $order->payment_status == 'refunded' ? 'disabled' : '' }}>✅ Đã Thanh Toán</option>
+                                <option value="paid" 
+                                    {{ $order->payment_status == 'paid' ? 'selected disabled' : '' }} 
+                                    {{ (in_array($order->payment_method, ['vnpay', 'momo']) && $order->payment_status == 'unpaid') ? 'disabled' : '' }}>
+                                    ✅ Đã Thanh Toán
+                                </option>
                                 
-                                {{-- Đơn COD thì ẨN luôn tùy chọn Hoàn tiền --}}
                                 @if($order->payment_method != 'cod')
-                                    <option value="refunded" {{ $order->payment_status == 'refunded' ? 'selected' : '' }}>💸 Hoàn Tiền</option>
+                                    @php
+                                        // KHÓA HOÀN TIỀN NẾU ĐƠN ĐANG GIAO HOẶC ĐÃ GIAO HOẶC CHƯA TRẢ TIỀN
+                                        $disableRefund = ($order->payment_status != 'paid' || in_array($order->order_status, ['shipping', 'completed']));
+                                    @endphp
+                                    <option value="refunded" {{ $order->payment_status == 'refunded' ? 'selected disabled' : '' }} {{ $disableRefund ? 'disabled' : '' }}>💸 Hoàn Tiền</option>
                                 @endif
                                 
                             </select>
                         </div>
 
-                        {{-- Nút Lưu Trạng thái --}}
+                        {{-- Nút Lưu Trạng thái (Mặc định bị tắt) --}}
                         <div class="col-6">
-                            <button onclick="handleUpdateOrder()" id="btnUpdateOrder" class="btn btn-primary w-100 fw-bold p-2 text-white" style="font-size: 0.8rem;" {{ $isOrderFrozen ? 'disabled' : '' }}>
+                            <button onclick="handleUpdateOrder()" id="btnUpdateOrder" class="btn btn-primary w-100 fw-bold p-2 text-white" style="font-size: 0.8rem;" disabled>
                                 <i class="mdi mdi-content-save-outline me-1"></i>Lưu đơn
                             </button>
                         </div>
 
-                        {{-- Nút Lưu Thanh toán --}}
+                        {{-- Nút Lưu Thanh toán (Mặc định bị tắt) --}}
                         <div class="col-6">
-                            <button onclick="updatePayment()" id="btnUpdatePayment" class="btn btn-success w-100 fw-bold p-2 text-white" style="font-size: 0.8rem;" {{ $isPaymentFrozen ? 'disabled' : '' }}>
-                                <i class="mdi mdi-cash-check me-1"></i>Lưu trạng thái
+                            <button onclick="updatePayment()" id="btnUpdatePayment" class="btn btn-success w-100 fw-bold p-2 text-white" style="font-size: 0.8rem;" disabled>
+                                <i class="mdi mdi-cash-check me-1"></i>Lưu thanh toán
                             </button>
                         </div>
                     </div>
@@ -352,40 +371,25 @@
 </div>
 
 <style>
-    /* FIX MÀU CHỮ SELECT BOX BỊ TÀNG HÌNH */
-    .custom-select-fix {
-        background-color: #ffffff !important;
-        color: #212529 !important;
-        border: 1px solid #dee2e6 !important;
-    }
-    .custom-select-fix:focus {
-        border-color: #0d6efd !important;
-        box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25) !important;
-    }
-    .custom-select-fix option {
-        color: #212529 !important;
-        background-color: #ffffff !important;
-        font-weight: 500;
-    }
-    .custom-select-fix option:disabled {
-        color: #adb5bd !important;
-    }
+    /* FIX MÀU CHỮ SELECT BOX */
+    .custom-select-fix { background-color: #ffffff !important; color: #212529 !important; border: 1px solid #dee2e6 !important; }
+    .custom-select-fix:focus { border-color: #0d6efd !important; box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25) !important; }
+    .custom-select-fix option { color: #212529 !important; background-color: #ffffff !important; font-weight: 500; }
+    .custom-select-fix option:disabled { color: #adb5bd !important; }
+    
+    /* Làm mờ nút khi bị disabled */
+    button:disabled { opacity: 0.6; cursor: not-allowed; }
 
     /* CSS CHO STEAMER TIẾN TRÌNH */
     .stepper-horizontal { position: relative; padding: 20px 0; margin-bottom: 10px; }
     .progress-bar-bg { position: absolute; top: 40px; left: 12.5%; width: 75%; height: 4px; background: #e9ecef; border-radius: 4px; z-index: 0; }
     .progress-bar-fill { height: 100%; border-radius: 4px; transition: width 0.5s ease; }
-    
     .step-item .step-icon { width: 44px; height: 44px; border-radius: 50%; color: #adb5bd; border-color: #e9ecef !important; transition: all 0.3s ease; }
     .step-item .step-text { color: #adb5bd; }
-    
     .step-passed .step-icon { background: #0d6efd !important; color: #fff; border-color: #0d6efd !important; }
     .step-passed .step-text { color: #0d6efd; }
-    
     .step-active .step-icon { border-color: #0d6efd !important; color: #0d6efd; box-shadow: 0 0 0 5px rgba(13, 110, 253, 0.2) !important; }
     .step-active .step-text { color: #212529; font-weight: 900 !important; }
-
-    /* CSS TIMELINE NHẬT KÝ */
     .timeline-container::before { content: ''; position: absolute; top: 0; left: 19px; height: 100%; width: 2px; background: #dee2e6; z-index: 1; }
 
     /* Toast & Modal */
@@ -394,8 +398,6 @@
     .cancel-modal{ position:fixed; inset:0; background:rgba(0,0,0,0.5); display:none; align-items:center; justify-content:center; z-index:9999; backdrop-filter: blur(3px);}
     .cancel-box{ background:#fff; padding:30px; border-radius:12px; width:350px; text-align:center; animation:popModal .3s ease-out; }
     @keyframes popModal{ from{transform:scale(.9);opacity:0} to{transform:scale(1);opacity:1} }
-    
-    /* Image Zoom */
     .image-modal-content { background: transparent; width: auto; max-width: 90vw; padding: 0; position: relative; box-shadow: none;}
     .image-modal-content img { max-height: 80vh; border-radius: 8px; object-fit: contain; background: #fff; padding: 5px;}
     .close-img-btn { position: absolute; top: -15px; right: -15px; width: 35px; height: 35px; border-radius: 50%; background: #fff; color: #dc3545; border: none; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 12px rgba(0,0,0,0.1); cursor: pointer; z-index: 10; }
@@ -404,6 +406,14 @@
 <div id="toast" class="toast"><i class="mdi mdi-check-circle me-2"></i>Cập nhật thành công</div>
 
 <script>
+// Mở khóa nút bấm khi có sự thay đổi
+function enableSaveOrderBtn() {
+    document.getElementById('btnUpdateOrder').disabled = false;
+}
+function enableSavePaymentBtn() {
+    document.getElementById('btnUpdatePayment').disabled = false;
+}
+
 function sendAjaxRequest(url, bodyData, successMsg, bgColor, btnId, originalHtml) {
     let btnUp = document.getElementById(btnId);
     
@@ -446,7 +456,7 @@ function sendAjaxRequest(url, bodyData, successMsg, bgColor, btnId, originalHtml
         showToast(error.message, "#dc3545");
         if(btnUp) {
             btnUp.innerHTML = originalHtml;
-            btnUp.disabled = false;
+            btnUp.disabled = false; // Mở lại cho bấm nếu bị lỗi backend
         }
     });
 }
@@ -481,7 +491,7 @@ function closeCancel(){
 function updatePayment() {
     let select = document.getElementById('paymentStatusSelect');
     if (!select) return;
-    let btnOriginal = '<i class="mdi mdi-cash-check me-1"></i>Lưu tiền';
+    let btnOriginal = '<i class="mdi mdi-cash-check me-1"></i>Lưu thanh toán';
 
     sendAjaxRequest("{{ url('/admin/orders/'.$order->id.'/status') }}", { 
         payment_status: select.value

@@ -81,15 +81,17 @@
                     @error('payment_method') <div class="alert alert-danger m-t-15">{{ $message }}</div> @enderror
                     
                     <div class="p-t-20">
-                        <label class="payment-method-box flex-w flex-m p-all-15 pointer m-b-15" style="border: 1px solid #e6e6e6; border-radius: 5px; cursor: pointer; transition: 0.3s;">
-                            <div class="m-r-15"><input type="radio" name="payment_method" value="cod" {{ old('payment_method') == 'cod' ? 'checked' : '' }} style="transform: scale(1.3);"></div>
-                            <span class="stext-105 cl2 font-weight-bold p-l-5" style="font-size: 15px;">Thanh toán khi nhận hàng (COD)</span>
+                        {{-- ĐÃ FIX BẤM ĐƯỢC 100%: Bỏ div bọc input, thêm thuộc tính ID cho Label tương tác trực tiếp --}}
+                        <label class="payment-method-box flex-w flex-m p-all-15 pointer m-b-15" for="payment_cod" style="border: 1px solid #e6e6e6; border-radius: 5px; cursor: pointer; display: flex; align-items: center;">
+                            <input type="radio" id="payment_cod" name="payment_method" value="cod" {{ old('payment_method', 'cod') == 'cod' ? 'checked' : '' }} style="transform: scale(1.3); margin-right: 15px; cursor: pointer;">
+                            <span class="stext-105 cl2 font-weight-bold" style="font-size: 15px; transition: 0.3s;">Thanh toán khi nhận hàng (COD)</span>
                         </label>
-                        <label class="payment-method-box flex-w flex-m p-all-15 pointer m-b-15" style="border: 1px solid #e6e6e6; border-radius: 5px; cursor: pointer; transition: 0.3s;">
-                            <div class="m-r-15"><input type="radio" name="payment_method" value="momo" {{ old('payment_method') == 'momo' ? 'checked' : '' }} style="transform: scale(1.3);"></div>
-                            <span class="stext-105 cl2 font-weight-bold p-l-5" style="font-size: 15px;">Thanh toán qua ví điện tử MoMo</span>
+
+                        <label class="payment-method-box flex-w flex-m p-all-15 pointer m-b-15" for="payment_vnpay" style="border: 1px solid #e6e6e6; border-radius: 5px; cursor: pointer; display: flex; align-items: center;">
+                            <input type="radio" id="payment_vnpay" name="payment_method" value="vnpay" {{ old('payment_method') == 'vnpay' ? 'checked' : '' }} style="transform: scale(1.3); margin-right: 15px; cursor: pointer;">
+                            
+                            <span class="stext-105 cl2 font-weight-bold" style="font-size: 15px; transition: 0.3s;">Thanh toán trực tuyến (VNPAY)</span>
                         </label>
-                    
                     </div>
                 </div>
             </div>
@@ -245,8 +247,14 @@
 </div>
 
 <style>
-    .payment-method-box:hover { background-color: #f8f9fa; border-color: #ccc !important; }
-    input[name="payment_method"]:checked + span { color: #dc3545; }
+    /* CSS hiệu ứng Payment Box */
+    .payment-method-box { background-color: #fff; transition: all 0.3s ease; }
+    .payment-method-box:hover { background-color: #f8f9fa; border-color: #ccc; }
+    
+    /* CSS cho trạng thái Active */
+    .payment-method-box.active-payment { border-color: #dc3545 !important; background-color: #fffafb !important; }
+    .payment-method-box.active-payment span.stext-105 { color: #dc3545 !important; }
+    
     .bor-red { border-color: #dc3545 !important; }
     .hov-bg-light:hover { background-color: #f8f9fa; }
     .select2-container .select2-selection--single { height: 45px; border: 1px solid #e6e6e6; border-radius: 3px; outline: none; }
@@ -260,7 +268,15 @@
 
 <script>
     $(document).ready(function() {
-        
+        // Javascript tự động đổi màu Khung thanh toán
+        $('input[name="payment_method"]').on('change', function() {
+            $('.payment-method-box').removeClass('active-payment');
+            if($(this).is(':checked')) {
+                $(this).closest('.payment-method-box').addClass('active-payment');
+            }
+        });
+        $('input[name="payment_method"]:checked').trigger('change');
+
         $('.js-toggle-addr').on('change', function() {
             if($(this).val() === 'new') {
                 $('#existing_address_block').slideUp(300);
@@ -463,28 +479,23 @@
             swal("Thành công", "Tính năng Mã giảm giá đang được phát triển, mã " + code + " đã được ghi nhận!", "success");
         }
 
-        // ===============================================
-        // ĐÃ NÂNG CẤP LẠI VALIDATION MƯỢT NHƯ NHUNG (THEO THỨ TỰ TỪ TRÊN XUỐNG)
-        // ===============================================
         $(document).on('click', '.js-btn-checkout', function(e) {
             e.preventDefault(); 
             var form = $('#checkoutForm');
             var isNewAddress = $('#new_address_block').is(':visible') || ($('#new_address_block').length && !$('#existing_address_block').length);
 
-            $('.js-custom-error').remove(); // Xóa báo lỗi cũ
+            $('.js-custom-error').remove(); 
 
             if (isNewAddress) {
-                // 1. Kiểm tra Tên, SĐT, Email trước tiên
                 var fields = ['customer_name', 'customer_phone', 'email'];
                 for (var i = 0; i < fields.length; i++) {
                     var input = form.find('input[name="' + fields[i] + '"]')[0];
                     if (input && !input.checkValidity()) {
-                        input.reportValidity(); // HTML5 sẽ giật lên báo lỗi
-                        return; // Dừng lại không check tiếp các trường dưới
+                        input.reportValidity(); 
+                        return; 
                     }
                 }
 
-                // 2. Nếu Tên, SĐT, Email đều OK -> Kiểm tra tiếp Tỉnh/Huyện/Xã bằng JS
                 var isSelectValid = true;
                 if($('.api_province').val() === '') { 
                     $('.api_province').closest('.select2-wrapper').append('<small class="text-danger js-custom-error m-t-5 d-block" style="font-size: 13px;">Vui lòng chọn Tỉnh/Thành phố.</small>');
@@ -500,12 +511,10 @@
                 }
 
                 if(!isSelectValid) {
-                    // Nếu lỗi thì cuộn màn hình lên để khách thấy chữ đỏ
                     $('html, body').animate({ scrollTop: $(".api_province").offset().top - 150 }, 500);
-                    return; // Dừng lại không check Địa chỉ cụ thể
+                    return; 
                 }
 
-                // 3. Tỉnh/Thành OK -> Kiểm tra tiếp Địa chỉ cụ thể
                 var specificAddress = form.find('input[name="specific_address"]')[0];
                 if (specificAddress && !specificAddress.checkValidity()) {
                     specificAddress.reportValidity();
@@ -513,21 +522,18 @@
                 }
 
             } else {
-                // Dùng địa chỉ cũ thì check xem có chọn chưa
                 if (form.find('input[name="address_id"]:checked').length === 0) {
                     swal("Cảnh báo", "Vui lòng chọn một địa chỉ giao hàng!", "warning");
                     return;
                 }
             }
 
-            // 4. Cuối cùng mới kiểm tra Phương thức thanh toán
             if (!$('input[name="payment_method"]:checked').val()) {
                 swal("Cảnh báo", "Vui lòng chọn một Phương thức thanh toán!", "warning");
                 $('html, body').animate({ scrollTop: $(".payment-method-box").first().offset().top - 150 }, 500);
                 return;
             }
 
-            // 5. NẾU MỌI THỨ HOÀN HẢO -> SUBMIT TRỰC TIẾP LÊN SERVER
             var btn = $(this);
             btn.html('<i class="zmdi zmdi-spinner zmdi-hc-spin m-r-10 fs-20"></i> ĐANG CHỐT ĐƠN...');
             btn.css('opacity', '0.7').css('pointer-events', 'none');

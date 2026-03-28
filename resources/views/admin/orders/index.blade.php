@@ -131,7 +131,6 @@
                                             @endif
                                         </div>
                                         
-                                        {{-- THÊM MỚI: Phương thức thanh toán --}}
                                         <div class="small fw-bold mt-1">
                                             @if($order->payment_method == 'momo')
                                                 <span style="color: #a50064;"><i class="mdi mdi-wallet me-1"></i>MoMo</span>
@@ -143,6 +142,27 @@
                                                 <span class="text-secondary"><i class="mdi mdi-cash me-1"></i>COD</span>
                                             @endif
                                         </div>
+
+                                        {{-- ĐÃ FIX: CHẶN HIỂN THỊ MÃ GIAO DỊCH ẢO CỦA ĐƠN COD --}}
+                                        @php
+                                            $paymentLog = \App\Models\Payment::where('order_id', $order->id)->latest()->first();
+                                        @endphp
+
+                                        @if($order->payment_method != 'cod' && $paymentLog && $paymentLog->transaction_code && $paymentLog->transaction_code != 'Unknown')
+                                            <div class="mt-1 text-info small fw-bold" style="font-size: 11px;">
+                                                Mã GD: {{ $paymentLog->transaction_code }}
+                                            </div>
+                                        @endif
+
+                                        @if($order->order_status == 'cancelled' && $paymentLog && $paymentLog->payment_status == 'failed')
+                                            <div class="mt-1 text-danger small fw-bold" style="font-size: 11px; line-height: 1.2; max-width: 150px; white-space: normal;">
+                                                <i class="mdi mdi-alert-circle me-1"></i>{{ $paymentLog->status }}
+                                            </div>
+                                        @elseif($order->order_status == 'cancelled' && $order->payment_status == 'unpaid' && in_array($order->payment_method, ['vnpay', 'momo']))
+                                             <div class="mt-1 text-danger small fw-bold" style="font-size: 11px; line-height: 1.2; max-width: 150px; white-space: normal;">
+                                                <i class="mdi mdi-alert-circle me-1"></i>Lỗi: Khách hủy/Lỗi giao dịch
+                                            </div>
+                                        @endif
                                     </td>
                                     
                                     {{-- Cột 6: Hành Động --}}

@@ -56,6 +56,7 @@ Route::post('/cart/remove', [CartController::class, 'remove'])->name('cart.remov
  
 Route::get('/checkout', [CheckoutController::class, 'index'])->name('checkout.index');
 Route::post('/checkout/process', [CheckoutController::class, 'process'])->name('checkout.process');
+Route::get('/checkout/vnpay-return', [App\Http\Controllers\Client\CheckoutController::class, 'vnpayReturn'])->name('checkout.vnpay_return');
 Route::get('/checkout/success/{order_code}', [CheckoutController::class, 'success'])->name('checkout.success');
 
 // ===============================================
@@ -65,6 +66,10 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/account', [AccountController::class, 'index'])->name('account.index');
     Route::get('/account/orders/{order_code}', [AccountController::class, 'showOrder'])->name('account.orders.show');
     Route::post('/account/orders/{order_code}/cancel', [AccountController::class, 'cancelOrder'])->name('account.orders.cancel');
+    
+    // ĐÃ THÊM ROUTE NHẬN HÀNG Ở ĐÂY
+    Route::post('/account/orders/{order_code}/receive', [AccountController::class, 'receiveOrder'])->name('account.orders.receive');
+    
     Route::post('/account/update-profile', [AccountController::class, 'updateProfile'])->name('account.update_profile');
     Route::post('/account/update-password', [AccountController::class, 'updatePassword'])->name('account.update_password');
     Route::post('/account/addresses', [AccountController::class, 'storeAddress'])->name('account.addresses.store');

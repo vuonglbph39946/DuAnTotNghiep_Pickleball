@@ -279,4 +279,58 @@ class AccountController extends Controller
             return back()->with('error_order', 'Có lỗi xảy ra: ' . $e->getMessage());
         }
     }
+
+    // Hàm xác nhận đã nhận hàng
+    public function receiveOrder($order_code)
+    {
+        \Illuminate\Support\Facades\DB::beginTransaction();
+        try {
+            // Lấy đơn hàng của đúng user đang đăng nhập
+            $order = \App\Models\Order::where('order_code', $order_code)
+                          ->where('user_id', \Illuminate\Support\Facades\Auth::id())
+                          ->lockForUpdate()
+                          ->firstOrFail();
+
+            // Rào chắn: Chỉ cho phép chốt khi đơn đang giao
+            if ($order->order_status !== 'shipping') {
+                throw new \Exception('Chỉ có thể xác nhận khi đơn hàng đang được giao!');
+            }
+
+            // 1. Chốt đơn hàng thành Completed
+            $order->order_status = 'completed';
+
+            // 2. LOGIC THÔNG MINH CHO THANH TOÁN
+            // Nếu là COD và Chưa trả tiền -> Đổi thành Paid
+            if ($order->payment_method === 'cod' && $order->payment_status === 'unpaid') {
+                $order->payment_status = 'paid';
+                
+                // Tiện tay ghi luôn 1 log vào bảng Payments để Admin đối soát
+                \App\Models\Payment::create([
+                    'order_id' => $order->id,
+                    'payment_gateway' => 'cod',
+                    'transaction_code' => 'COD_' . time(),
+                    'payment_status' => 'success',
+                    'amount' => $order->total_amount,
+                    'status' => 'Khách đã thanh toán tiền mặt khi nhận hàng'
+                ]);
+            }
+            // (Nếu là VNPay/MoMo thì đoạn IF trên bị bỏ qua, hệ thống giữ nguyên chữ Paid, không lỗi lầm gì)
+
+            $order->save();
+
+            // 3. Lưu lịch sử hành trình đơn hàng
+            \App\Models\OrderStatusLog::create([
+                'order_id' => $order->id,
+                'status' => 'completed',
+                'created_at' => now()
+            ]);
+
+            \Illuminate\Support\Facades\DB::commit();
+            return back()->with('success_order', 'Cảm ơn bạn đã xác nhận. Chúc bạn trải nghiệm sản phẩm vui vẻ!');
+
+        } catch (\Exception $e) {
+            \Illuminate\Support\Facades\DB::rollBack();
+            return back()->with('error_order', $e->getMessage());
+        }
+    }
 }

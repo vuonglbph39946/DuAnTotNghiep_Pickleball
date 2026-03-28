@@ -182,9 +182,9 @@
                                 <span class="stext-105 cl2" style="font-weight: bold;">Mã ĐH: <span style="color: #dc3545;">#{{ $order->order_code }}</span></span>
                                 <span class="stext-105" style="color: #fbbc04; font-weight: bold; text-transform: uppercase;">
                                     @if($order->order_status == 'pending') Chờ xác nhận
-                                    @elseif($order->order_status == 'confirmed') Chờ lấy hàng
-                                    @elseif($order->order_status == 'shipping') Đang giao hàng
-                                    @elseif($order->order_status == 'completed') Đã giao thành công
+                                    @elseif($order->order_status == 'confirmed') Đã xác nhận
+                                    @elseif($order->order_status == 'shipping') Đang giao 
+                                    @elseif($order->order_status == 'completed') Đã giao 
                                     @elseif($order->order_status == 'cancel_requested') Yêu cầu hủy
                                     @elseif($order->order_status == 'cancelled') Đã hủy
                                     @elseif($order->order_status == 'returned') Trả hàng
@@ -237,6 +237,16 @@
                                             @csrf
                                             <button type="button" class="btn btn-outline-danger flex-c-m stext-101 p-lr-20 trans-04 pointer fw-bold js-btn-cancel-order" style="height: 40px; border-radius: 3px;">
                                                 Hủy đơn
+                                            </button>
+                                        </form>
+                                    @endif
+
+                                    {{-- NEW: Nút Đã nhận hàng (nếu đang giao) --}}
+                                    @if($order->order_status == 'shipping')
+                                        <form action="{{ route('account.orders.receive', $order->order_code) }}" method="POST" class="ms-2 mb-0">
+                                            @csrf
+                                            <button type="button" class="btn btn-success flex-c-m stext-101 p-lr-20 trans-04 pointer fw-bold js-btn-receive-order" style="height: 40px; border-radius: 3px; color: #fff;">
+                                                Đã nhận hàng
                                             </button>
                                         </form>
                                     @endif
@@ -477,7 +487,7 @@
             $('#modalAddAddress').modal('show');
         @endif
 
-        // SCRIPT XÁC NHẬN HỦY ĐƠN HÀNG TRỰC TIẾP
+        // SCRIPT XÁC NHẬN HỦY ĐƠN HÀNG
         $('.js-btn-cancel-order').on('click', function(e) {
             e.preventDefault();
             var form = $(this).closest('form');
@@ -489,6 +499,22 @@
                 dangerMode: true,
             }).then(function(willCancel) {
                 if (willCancel) {
+                    form.submit();
+                }
+            });
+        });
+
+        // THÊM SCRIPT XÁC NHẬN ĐÃ NHẬN HÀNG
+        $('.js-btn-receive-order').on('click', function(e) {
+            e.preventDefault();
+            var form = $(this).closest('form');
+            swal({
+                title: "Xác nhận đã nhận hàng?",
+                text: "Vui lòng chỉ xác nhận khi bạn đã nhận được gói hàng nguyên vẹn và thanh toán đầy đủ (nếu có).",
+                icon: "info",
+                buttons: ["Đóng lại", "Xác nhận"],
+            }).then(function(willConfirm) {
+                if (willConfirm) {
                     form.submit();
                 }
             });
