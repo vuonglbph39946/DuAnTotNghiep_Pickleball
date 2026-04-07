@@ -62,10 +62,27 @@ class OrderStatusController extends Controller
                     }
                 }
 
-                if ($newStatus === 'cancelled' && $oldStatus === 'confirmed') {
-                    foreach ($order->items as $item) {
-                        if ($item->product) Product::where('id', $item->product_id)->increment('stock', $item->quantity);
-                        if ($item->product_variant_id && $item->variant) ProductVariant::where('id', $item->product_variant_id)->increment('stock', $item->quantity);
+                // === ĐÃ FIX LỖI 2: CHỈ HOÀN LẠI KHI TRẠNG THÁI CŨ KHÁC 'cancelled' ===
+                if ($newStatus === 'cancelled' && $oldStatus !== 'cancelled') {
+                    
+                    // 1. Hoàn Tồn kho Sản phẩm (Nếu trước đó đã bị trừ ở bước 'confirmed')
+                    if ($oldStatus === 'confirmed') {
+                        foreach ($order->items as $item) {
+                            if ($item->product) Product::where('id', $item->product_id)->increment('stock', $item->quantity);
+                            if ($item->product_variant_id && $item->variant) ProductVariant::where('id', $item->product_variant_id)->increment('stock', $item->quantity);
+                        }
+                    }
+
+                    // 2. HOÀN LẠI VOUCHER VÀ LƯỢT DÙNG CÁ NHÂN
+                    if ($order->coupon_id) {
+                        \App\Models\Coupon::where('id', $order->coupon_id)->increment('quantity', 1);
+                        if ($order->user_id) {
+                            \DB::table('coupon_user')
+                                ->where('coupon_id', $order->coupon_id)
+                                ->where('user_id', $order->user_id)
+                                ->limit(1) // ĐÃ FIX LỖI 1: CHỈ XÓA ĐÚNG 1 LẦN DÙNG CỦA ĐƠN NÀY
+                                ->delete();
+                        }
                     }
                 }
 

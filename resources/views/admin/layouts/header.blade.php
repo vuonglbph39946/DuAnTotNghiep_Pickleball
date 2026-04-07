@@ -40,7 +40,7 @@
             <p class="mb-1 mt-3 fw-semibold">{{ Auth::guard('admin')->check() ? Auth::guard('admin')->user()->name : 'Quản trị viên' }}</p>
             <p class="fw-light text-muted mb-0">{{ Auth::guard('admin')->check() ? Auth::guard('admin')->user()->email : 'admin@pballstore.com' }}</p>
           </div>
-          <a class="dropdown-item"><i class="dropdown-item-icon mdi mdi-account-outline text-primary me-2"></i> Hồ sơ cá nhân</a>
+          
           <a class="dropdown-item" href="{{ route('admin.logout') }}"><i class="dropdown-item-icon mdi mdi-power text-primary me-2"></i> Đăng xuất</a>
         </div>
       </li>

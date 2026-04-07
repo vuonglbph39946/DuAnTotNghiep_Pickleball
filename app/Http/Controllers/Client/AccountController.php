@@ -25,8 +25,12 @@ class AccountController extends Controller
         
         $addresses = $user->addresses()->orderBy('is_default', 'desc')->orderBy('created_at', 'desc')->get();
         
-        // BẮT ĐẦU QUERY ĐƠN HÀNG
-        $query = Order::with(['items.product', 'items.variant'])->where('user_id', $user->id);
+        // ĐÃ FIX: Gom đơn hàng theo user_id HOẶC customer_email
+        $query = Order::with(['items.product', 'items.variant'])
+            ->where(function($q) use ($user) {
+                $q->where('user_id', $user->id)
+                  ->orWhere('customer_email', $user->email);
+            });
 
         // 1. Lọc theo trạng thái (Tab)
         if ($request->filled('status') && $request->status !== 'all') {
@@ -46,7 +50,6 @@ class AccountController extends Controller
 
         $orders = $query->orderBy('created_at', 'desc')->get();
 
-        // Trả về view kèm theo từ khóa đang tìm để giữ lại trạng thái UI
         $currentStatus = $request->status ?? 'all';
         $searchTerm = $request->search ?? '';
 
@@ -54,17 +57,20 @@ class AccountController extends Controller
     }
 
     // ==========================================
-    // HÀM MỚI: XEM CHI TIẾT ĐƠN HÀNG
+    // XEM CHI TIẾT ĐƠN HÀNG
     // ==========================================
     public function showOrder($order_code)
     {
         $user = Auth::user();
         
-        // Tìm đơn hàng, bắt buộc phải là của user đang đăng nhập (Bảo mật)
+        // ĐÃ FIX: Cho phép xem nếu khớp ID HOẶC khớp Email
         $order = Order::with(['items.product', 'items.variant', 'statusLogs' => function($q) {
             $q->orderBy('id', 'desc');
         }])
-        ->where('user_id', $user->id)
+        ->where(function($q) use ($user) {
+            $q->where('user_id', $user->id)
+              ->orWhere('customer_email', $user->email);
+        })
         ->where('order_code', $order_code)
         ->firstOrFail();
 
@@ -155,7 +161,6 @@ class AccountController extends Controller
         $user = Auth::user();
         $is_default = $request->has('is_default') ? true : false;
 
-        // CHUẨN LOGIC: Nếu chưa có địa chỉ nào thì ép buộc cái đầu tiên phải là mặc định
         if ($user->addresses()->count() == 0) {
             $is_default = true;
         }
@@ -199,7 +204,6 @@ class AccountController extends Controller
 
         DB::beginTransaction();
         try {
-            // Tắt mặc định của tất cả địa chỉ cũ, bật cho cái mới
             $user->addresses()->update(['is_default' => false]);
             $address->update(['is_default' => true]);
             
@@ -220,14 +224,12 @@ class AccountController extends Controller
         $user = Auth::user();
         $address = $user->addresses()->findOrFail($id);
 
-        // ĐÃ FIX: Chỉ chặn xóa nếu nó là mặc định VÀ user đang có nhiều hơn 1 địa chỉ
         if ($address->is_default && $user->addresses()->count() > 1) {
             return back()->with('error_address', 'Không thể xóa! Vui lòng chọn địa chỉ khác làm mặc định trước khi xóa địa chỉ này.');
         }
 
         $address->delete();
 
-        // CHECK AN TOÀN: Đảm bảo user luôn có 1 địa chỉ mặc định nếu họ vẫn còn địa chỉ khác
         if ($user->addresses()->count() > 0 && !$user->addresses()->where('is_default', true)->exists()) {
             $latestAddress = $user->addresses()->latest()->first();
             if ($latestAddress) {
@@ -243,15 +245,22 @@ class AccountController extends Controller
         try {
             DB::beginTransaction();
             $user = Auth::user();
-            $order = Order::with(['items.product', 'items.variant'])->where('order_code', $order_code)->where('user_id', $user->id)->lockForUpdate()->firstOrFail();
+            
+            // ĐÃ FIX: Hủy đơn nếu khớp ID HOẶC Email
+            $order = Order::with(['items.product', 'items.variant'])
+                ->where('order_code', $order_code)
+                ->where(function($q) use ($user) {
+                    $q->where('user_id', $user->id)
+                      ->orWhere('customer_email', $user->email);
+                })
+                ->lockForUpdate()
+                ->firstOrFail();
 
-            // CHỈ CHO PHÉP HỦY KHI ĐANG Ở TRẠNG THÁI PENDING HOẶC CONFIRMED
             if (!in_array($order->order_status, ['pending', 'confirmed'])) {
                 DB::rollBack();
                 return back()->with('error_order', 'Không thể hủy vì đơn hàng đã bắt đầu được giao!');
             }
 
-            // NẾU ĐƠN ĐÃ ĐƯỢC XÁC NHẬN (CONFIRMED) THÌ TRƯỚC ĐÓ ĐÃ TRỪ KHO -> NAY PHẢI CỘNG LẠI KHO
             if ($order->order_status == 'confirmed') {
                 foreach ($order->items as $item) {
                     if ($item->product) Product::where('id', $item->product_id)->increment('stock', $item->quantity);
@@ -259,11 +268,26 @@ class AccountController extends Controller
                 }
             }
 
-            // CẬP NHẬT TRẠNG THÁI THÀNH ĐÃ HỦY CHO CẢ COD VÀ ONLINE
             $order->update(['order_status' => 'cancelled']);
             OrderStatusLog::create(['order_id' => $order->id, 'status' => 'cancelled', 'created_at' => now()]);
 
-            // NẾU LÀ ĐƠN THANH TOÁN ONLINE (MOMO, VNPAY...), GỬI EMAIL THÔNG BÁO HOÀN TIỀN
+            // ========================================================
+            // ĐÃ BỔ SUNG: HOÀN LẠI VOUCHER KHI KHÁCH TỰ HỦY ĐƠN
+            // ========================================================
+            if ($order->coupon_id) {
+                // Cộng lại 1 lượt cho kho tổng
+                \App\Models\Coupon::where('id', $order->coupon_id)->increment('quantity', 1);
+                
+                // Xóa 1 lượt dùng trong lịch sử của khách này
+                if ($order->user_id) {
+                    \Illuminate\Support\Facades\DB::table('coupon_user')
+                        ->where('coupon_id', $order->coupon_id)
+                        ->where('user_id', $order->user_id)
+                        ->limit(1)
+                        ->delete();
+                }
+            }
+
             if ($order->payment_method != 'cod') {
                 try {
                     \Illuminate\Support\Facades\Mail::to($order->customer_email)->send(new \App\Mail\RefundOrderMail($order));
@@ -280,31 +304,30 @@ class AccountController extends Controller
         }
     }
 
-    // Hàm xác nhận đã nhận hàng
     public function receiveOrder($order_code)
     {
         \Illuminate\Support\Facades\DB::beginTransaction();
         try {
-            // Lấy đơn hàng của đúng user đang đăng nhập
-            $order = \App\Models\Order::where('order_code', $order_code)
-                          ->where('user_id', \Illuminate\Support\Facades\Auth::id())
+            $user = Auth::user();
+            
+            // ĐÃ FIX: Nhận hàng nếu khớp ID HOẶC Email
+            $order = Order::where('order_code', $order_code)
+                          ->where(function($q) use ($user) {
+                              $q->where('user_id', $user->id)
+                                ->orWhere('customer_email', $user->email);
+                          })
                           ->lockForUpdate()
                           ->firstOrFail();
 
-            // Rào chắn: Chỉ cho phép chốt khi đơn đang giao
             if ($order->order_status !== 'shipping') {
                 throw new \Exception('Chỉ có thể xác nhận khi đơn hàng đang được giao!');
             }
 
-            // 1. Chốt đơn hàng thành Completed
             $order->order_status = 'completed';
 
-            // 2. LOGIC THÔNG MINH CHO THANH TOÁN
-            // Nếu là COD và Chưa trả tiền -> Đổi thành Paid
             if ($order->payment_method === 'cod' && $order->payment_status === 'unpaid') {
                 $order->payment_status = 'paid';
                 
-                // Tiện tay ghi luôn 1 log vào bảng Payments để Admin đối soát
                 \App\Models\Payment::create([
                     'order_id' => $order->id,
                     'payment_gateway' => 'cod',
@@ -314,11 +337,9 @@ class AccountController extends Controller
                     'status' => 'Khách đã thanh toán tiền mặt khi nhận hàng'
                 ]);
             }
-            // (Nếu là VNPay/MoMo thì đoạn IF trên bị bỏ qua, hệ thống giữ nguyên chữ Paid, không lỗi lầm gì)
 
             $order->save();
 
-            // 3. Lưu lịch sử hành trình đơn hàng
             \App\Models\OrderStatusLog::create([
                 'order_id' => $order->id,
                 'status' => 'completed',

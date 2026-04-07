@@ -38,8 +38,6 @@
       </a>
     </li>
 
-   
-
     <li class="nav-item {{ request()->is('admin/banners*') ? 'active' : '' }}">
       <a class="nav-link" href="{{ route('admin.banners.index') }}">
         <i class="mdi mdi-image-multiple-outline menu-icon"></i>
@@ -47,8 +45,9 @@
       </a>
     </li>
 
-    <li class="nav-item {{ request()->is('admin/promotions*') ? 'active' : '' }}">
-      <a class="nav-link" href="{{ route('admin.promotions.index') }}">
+    {{-- ĐÃ SỬA LẠI ĐƯỜNG DẪN COUPON Ở ĐÂY CHO KHỚP VỚI CONTROLLER --}}
+    <li class="nav-item {{ request()->is('admin/coupons*') ? 'active' : '' }}">
+      <a class="nav-link" href="{{ route('admin.coupons.index') }}">
         <i class="mdi mdi-ticket-percent-outline menu-icon"></i>
         <span class="menu-title">Mã Giảm Giá</span>
       </a>

@@ -532,6 +532,8 @@
         $("#api_province").change(function() { let province_id = $(this).val(); $("#province_name").val($(this).find(':selected').data('name')); $("#api_ward").html('<option value="">Chọn Phường / Xã *</option>').prop('disabled', true); if (province_id) { $.ajax({ url: host + "p/" + province_id + "?depth=2", method: "GET", success: function(data) { let row = '<option value="">Chọn Quận / Huyện *</option>'; data.districts.forEach(element => { row += `<option value="${element.code}" data-name="${element.name}">${element.name}</option>`; }); $("#api_district").html(row).prop('disabled', false); } }); } else { $("#api_district").html('<option value="">Chọn Quận / Huyện *</option>').prop('disabled', true); } });
         $("#api_district").change(function() { let district_id = $(this).val(); $("#district_name").val($(this).find(':selected').data('name')); if (district_id) { $.ajax({ url: host + "d/" + district_id + "?depth=2", method: "GET", success: function(data) { let row = '<option value="">Chọn Phường / Xã *</option>'; data.wards.forEach(element => { row += `<option value="${element.code}" data-name="${element.name}">${element.name}</option>`; }); $("#api_ward").html(row).prop('disabled', false); } }); } else { $("#api_ward").html('<option value="">Chọn Phường / Xã *</option>').prop('disabled', true); } });
         $("#api_ward").change(function() { $("#ward_name").val($(this).find(':selected').data('name')); });
+
+        
     });
 </script>
 @endpush

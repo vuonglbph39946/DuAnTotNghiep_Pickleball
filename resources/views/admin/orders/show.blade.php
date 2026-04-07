@@ -308,7 +308,7 @@
                 </div>
             </div>
 
-            {{-- THÔNG TIN GIAO HÀNG --}}
+           {{-- THÔNG TIN GIAO HÀNG --}}
             <div class="card shadow-sm border-0 rounded-3">
                 <div class="card-body p-4">
                     <h6 class="fw-bold text-uppercase mb-4"><i class="mdi mdi-account-box-outline text-primary me-2"></i>Thông tin giao hàng</h6>
@@ -329,10 +329,18 @@
                     @if($order->customer_email)
                         <p class="mb-2"><i class="mdi mdi-email-outline text-info me-2"></i> {{ $order->customer_email }}</p>
                     @endif
-                    <p class="mb-4 mt-3" style="line-height: 1.5;">
+                    <p class="mb-3 mt-3" style="line-height: 1.5;">
                         <i class="mdi mdi-map-marker-outline text-danger me-2"></i>
                         {{ $order->specific_address ? $order->specific_address . ($order->ward_name ? ', ' . $order->ward_name : '') . ($order->district_name ? ', ' . $order->district_name : '') . ', ' . $order->province_name : 'Chưa có địa chỉ' }}
                     </p>
+
+                    {{-- === ĐÃ BỔ SUNG: HIỂN THỊ GHI CHÚ CỦA KHÁCH HÀNG LÀM NỔI BẬT === --}}
+                    @if($order->note)
+                        <div class="alert alert-warning p-2 mb-4 shadow-sm" style="border-left: 4px solid #ffc107; font-size: 0.9rem; background-color: #fffbeb;">
+                            <strong class="text-dark"><i class="mdi mdi-message-text-outline me-1"></i>Ghi chú từ khách:</strong> 
+                            <span class="text-dark">{{ $order->note }}</span>
+                        </div>
+                    @endif
 
                     <div class="bg-light p-3 rounded border">
                         <div class="d-flex justify-content-between mb-2">
@@ -357,6 +365,19 @@
                             <span class="text-muted small">Phí vận chuyển:</span>
                             <span class="fw-bold text-dark">{{ number_format($order->shipping_fee ?? 0) }} đ</span>
                         </div>
+
+                        {{-- === ĐÃ BỔ SUNG: HIỂN THỊ SỐ TIỀN ĐƯỢC GIẢM QUA VOUCHER === --}}
+                        @if($order->discount_amount > 0)
+                        <div class="d-flex justify-content-between mb-2">
+                            <span class="text-muted small">Giảm giá Voucher:
+                                @if($order->coupon)
+                                    <span class="badge bg-danger ms-1">{{ $order->coupon->code }}</span>
+                                @endif
+                            </span>
+                            <span class="fw-bold text-success">- {{ number_format($order->discount_amount) }} đ</span>
+                        </div>
+                        @endif
+
                         <hr class="my-2 border-secondary">
                         <div class="d-flex justify-content-between align-items-center mt-2">
                             <span class="fw-bold text-dark">TỔNG CỘNG:</span>
@@ -514,6 +535,8 @@ function showToast(msg, bgColor){
     t.classList.add('show');
     setTimeout(()=>t.classList.remove('show'), 3000); 
 }
+
+
 </script>
 
 <div id="imagePopupModal" class="cancel-modal" onclick="closeImageModal()">

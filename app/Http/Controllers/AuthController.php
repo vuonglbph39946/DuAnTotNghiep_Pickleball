@@ -4,7 +4,7 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use App\Models\User;
-use App\Models\Order; // ĐÃ THÊM: Model Order để thao tác đồng bộ
+use App\Models\Order; 
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\DB;
@@ -47,9 +47,6 @@ class AuthController extends Controller
             $request->session()->regenerate();
             RateLimiter::clear($throttleKey);
 
-            // ========================================================
-            // ĐÃ THÊM: ĐỒNG BỘ ĐƠN HÀNG VÃNG LAI KHI ĐĂNG NHẬP
-            // ========================================================
             $user = Auth::user();
             Order::where('customer_email', $user->email)
                  ->whereNull('user_id')
@@ -104,9 +101,6 @@ class AuthController extends Controller
 
         Auth::login($user);
 
-        // ========================================================
-        // ĐÃ THÊM: ĐỒNG BỘ ĐƠN HÀNG VÃNG LAI KHI VỪA TẠO TÀI KHOẢN
-        // ========================================================
         Order::where('customer_email', $user->email)
              ->whereNull('user_id')
              ->update(['user_id' => $user->id]);
@@ -137,9 +131,9 @@ class AuthController extends Controller
             ['token' => $token, 'created_at' => Carbon::now()]
         );
 
-        $resetLink = route('password.reset', ['token' => $token, 'email' => $request->email]);
-
-        Mail::send('client.auth.emails.reset-password', ['resetLink' => $resetLink], function ($message) use ($request) {
+        // ĐÃ SỬA: Đường dẫn thành client.emails.reset_password 
+        // ĐÃ SỬA: Truyền vào 2 biến $token và $email để bên View sử dụng
+        Mail::send('client.emails.reset_password', ['token' => $token, 'email' => $request->email], function ($message) use ($request) {
             $message->to($request->email);
             $message->subject('Khôi phục mật khẩu - PBall Store');
         });
@@ -163,9 +157,9 @@ class AuthController extends Controller
         ]);
 
         $resetRecord = DB::table('password_reset_tokens')
-                         ->where('email', $request->email)
-                         ->where('token', $request->token)
-                         ->first();
+                          ->where('email', $request->email)
+                          ->where('token', $request->token)
+                          ->first();
 
         if (!$resetRecord) {
             return back()->withErrors(['email' => 'Liên kết không hợp lệ hoặc đã bị thay đổi.']);
@@ -194,9 +188,6 @@ class AuthController extends Controller
         return redirect()->route('home');
     }
 
-    // ===============================================
-   // XỬ LÝ ĐĂNG NHẬP KHU VỰC ADMIN (GUARD RIÊNG)
-    // ===============================================
     public function showAdminLogin() {
         if (Auth::guard('admin')->check() && Auth::guard('admin')->user()->role === 'admin') {
             return redirect()->route('admin.dashboard');
@@ -211,7 +202,7 @@ class AuthController extends Controller
         ]);
 
         if (Auth::guard('admin')->attempt(['email' => $request->email, 'password' => $request->password, 'role' => 'admin'])) {
-            return redirect()->route('admin.dashboard')->with('success', 'Chào mừng sếp quay trở lại!');
+            return redirect()->route('admin.dashboard')->with('success', 'Chào mừng quay trở lại!');
         }
 
         return back()->withInput($request->only('email'))->withErrors([

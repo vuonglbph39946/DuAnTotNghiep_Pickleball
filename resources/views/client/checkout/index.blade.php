@@ -6,13 +6,24 @@
 
 <div class="container p-t-80 p-b-50">
     <div class="bread-crumb flex-w p-b-30">
-        <a href="{{ url('/') }}" class="stext-109 cl8 hov-cl1 trans-04">Trang chủ <i class="fa fa-angle-right m-l-9 m-r-10" aria-hidden="true"></i></a>
+        <a href="{{ url('/') }}" class="stext-109 cl8 hov-cl1 trans-04">Trang chủ <i class="fa fa-angle-right m-l-9 m-function refreshCheckoutCart() {-10" aria-hidden="true"></i></a>
         <a href="{{ route('cart.index') }}" class="stext-109 cl8 hov-cl1 trans-04">Giỏ hàng <i class="fa fa-angle-right m-l-9 m-r-10" aria-hidden="true"></i></a>
         <span class="stext-109 cl4">Thanh toán</span>
     </div>
 
     @if(session('error'))
-        <div class="alert alert-danger m-b-20">{{ session('error') }}</div>
+        <div class="alert alert-danger m-b-20"><strong>Lỗi:</strong> {{ session('error') }}</div>
+    @endif
+
+    @if ($errors->any())
+        <div class="alert alert-danger m-b-20 shadow-sm" style="border-left: 5px solid #dc3545;">
+            <strong style="font-size: 16px;"><i class="fa fa-exclamation-triangle m-r-10"></i>Vui lòng kiểm tra lại các thông tin sau:</strong>
+            <ul class="m-t-10 m-l-20" style="list-style-type: circle;">
+                @foreach ($errors->all() as $error)
+                    <li>{{ $error }}</li>
+                @endforeach
+            </ul>
+        </div>
     @endif
 
     <form action="{{ route('checkout.process') }}" method="POST" id="checkoutForm">
@@ -38,7 +49,6 @@
                                 </label>
                                 
                                 <div id="existing_address_block" class="p-l-25">
-                                    @error('address_id') <div class="alert alert-danger">{{ $message }}</div> @enderror
                                     @foreach($addresses as $addr)
                                     <label class="flex-w p-all-15 pointer m-b-10" style="border: 1px solid {{ $addr->is_default ? '#dc3545' : '#e6e6e6' }}; border-radius: 5px; transition: 0.3s; {{ $addr->is_default ? 'background-color: #fffafb;' : '' }}">
                                         <div class="m-r-15 p-t-5">
@@ -78,10 +88,8 @@
 
                 <div class="p-all-30 bor10 bg0 shadow-sm">
                     <h4 class="mtext-105 cl2 p-b-20" style="border-bottom: 1px solid #e6e6e6; font-weight: 600;">2. Phương thức thanh toán <span class="text-danger">*</span></h4>
-                    @error('payment_method') <div class="alert alert-danger m-t-15">{{ $message }}</div> @enderror
                     
                     <div class="p-t-20">
-                        {{-- ĐÃ FIX BẤM ĐƯỢC 100%: Bỏ div bọc input, thêm thuộc tính ID cho Label tương tác trực tiếp --}}
                         <label class="payment-method-box flex-w flex-m p-all-15 pointer m-b-15" for="payment_cod" style="border: 1px solid #e6e6e6; border-radius: 5px; cursor: pointer; display: flex; align-items: center;">
                             <input type="radio" id="payment_cod" name="payment_method" value="cod" {{ old('payment_method', 'cod') == 'cod' ? 'checked' : '' }} style="transform: scale(1.3); margin-right: 15px; cursor: pointer;">
                             <span class="stext-105 cl2 font-weight-bold" style="font-size: 15px; transition: 0.3s;">Thanh toán khi nhận hàng (COD)</span>
@@ -89,7 +97,6 @@
 
                         <label class="payment-method-box flex-w flex-m p-all-15 pointer m-b-15" for="payment_vnpay" style="border: 1px solid #e6e6e6; border-radius: 5px; cursor: pointer; display: flex; align-items: center;">
                             <input type="radio" id="payment_vnpay" name="payment_method" value="vnpay" {{ old('payment_method') == 'vnpay' ? 'checked' : '' }} style="transform: scale(1.3); margin-right: 15px; cursor: pointer;">
-                            
                             <span class="stext-105 cl2 font-weight-bold" style="font-size: 15px; transition: 0.3s;">Thanh toán trực tuyến (VNPAY)</span>
                         </label>
                     </div>
@@ -168,11 +175,14 @@
                                     <i class="zmdi zmdi-card-giftcard m-r-8" style="font-size: 20px;"></i> PBall Voucher
                                 </span>
                                 <span class="stext-105 cl6" style="font-size: 14px;">
-                                    <span id="selected-coupon-text">Chọn hoặc nhập mã</span>
+                                    {{-- ĐÃ THÊM MỚI TÍNH NĂNG COUPON: Highlight nếu đã áp mã --}}
+                                    <span id="selected-coupon-text" style="{{ isset($couponCode) ? 'color: #dc3545; font-weight: bold;' : '' }}">
+                                        {{ isset($couponCode) ? 'Mã: ' . $couponCode : 'Chọn hoặc nhập mã' }}
+                                    </span>
                                     <i class="zmdi zmdi-chevron-right m-l-10" style="font-size: 16px;"></i>
                                 </span>
                             </div>
-                            <input type="hidden" name="coupon_code" id="applied_coupon_code" value="">
+                            <input type="hidden" name="coupon_code" id="applied_coupon_code" value="{{ $couponCode ?? '' }}">
                         </div>
 
                         <div class="p-t-20 p-b-20" style="border-bottom: 1px dashed #e6e6e6;">
@@ -190,9 +200,15 @@
                                 <span class="stext-105 cl2 font-weight-bold">{{ $shippingFee == 0 ? 'Miễn phí' : number_format($shippingFee) . 'đ' }}</span>
                             </div>
                             
+                            {{-- ĐÃ THÊM MỚI TÍNH NĂNG COUPON: Cột hiển thị số tiền Giảm Giá --}}
+                            <div class="flex-w flex-sb-m p-b-10 discount-row" style="{{ isset($discountAmount) && $discountAmount > 0 ? '' : 'display: none;' }}">
+                                <span class="stext-105 cl2">Giảm giá Voucher:</span>
+                                <span class="stext-105 font-weight-bold text-success discount-display">- {{ isset($discountAmount) ? number_format($discountAmount) : 0 }}đ</span>
+                            </div>
+
                             <div class="flex-w flex-sb-m p-t-15 m-t-10" style="border-top: 1px solid #e6e6e6;">
                                 <span class="mtext-101 cl2" style="font-size: 18px;">Tổng thanh toán:</span>
-                                <span class="mtext-101 cl2 text-danger" style="font-size: 24px; font-weight: bold;">{{ number_format($totalAmount) }}đ</span>
+                                <span class="mtext-101 cl2 text-danger" id="final-total-display" style="font-size: 24px; font-weight: bold;">{{ number_format($totalAmount) }}đ</span>
                             </div>
                         </div>
                     </div> 
@@ -206,55 +222,121 @@
     </form>
 </div>
 
-<div class="modal fade" id="couponModal" tabindex="-1" role="dialog" aria-hidden="true" style="z-index: 100000;">
+<div class="modal fade" id="couponModal" tabindex="-1" role="dialog" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered" role="document">
-        <div class="modal-content" style="border-radius: 8px; border: none; overflow: hidden;">
-            <div class="modal-header" style="border-bottom: 1px solid #eee; background: #fff;">
-                <h5 class="modal-title stext-105 cl2 font-weight-bold" style="font-size: 18px;">Chọn PBall Voucher</h5>
-                <button type="button" class="close" data-dismiss="modal" aria-label="Close" style="outline: none;">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title font-weight-bold" style="font-size: 18px;"><i class="zmdi zmdi-card-giftcard text-danger"></i> Chọn Mã Giảm Giá</h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
                     <span aria-hidden="true">&times;</span>
                 </button>
             </div>
+            
             <div class="modal-body p-all-20" style="background: #f4f6f8;">
                 <div class="flex-w flex-m w-full m-b-20 p-all-10 bg0" style="border-radius: 4px; box-shadow: 0 1px 3px rgba(0,0,0,0.05);">
-                    <input class="stext-104 cl2 plh4 p-lr-15 m-r-10" type="text" id="manual_coupon_code" placeholder="Mã Voucher" style="flex: 1; height: 40px; border: 1px solid #e6e6e6; border-radius: 3px; outline: none; text-transform: uppercase;">
+                    <input class="stext-104 cl2 plh4 p-lr-15 m-r-10" type="text" id="manual_coupon_code" placeholder="Nhập mã ưu đãi..." style="flex: 1; height: 40px; border: 1px solid #e6e6e6; border-radius: 3px; outline: none; text-transform: uppercase;">
                     <button type="button" class="flex-c-m stext-104 cl0 bg-danger hov-btn1 p-lr-15 trans-04 pointer js-apply-manual-coupon" style="height: 40px; border-radius: 3px; width: 90px; font-weight: bold;">
                         Áp dụng
                     </button>
                 </div>
 
-                <div style="max-height: 300px; overflow-y: auto; padding-right: 5px;">
-                    <div class="flex-w flex-sb-m p-all-15 bg0 m-b-15" style="border-radius: 5px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); border-left: 4px solid #dc3545; position: relative;">
-                        <div style="width: 75%;">
-                            <span class="stext-105 cl2 font-weight-bold d-block p-b-5" style="font-size: 16px;">GIẢM 10%</span>
-                            <span class="stext-111 cl6 d-block" style="font-size: 12px; line-height: 1.4;">Đơn tối thiểu 500k. Giảm tối đa 50k.</span>
-                            <span class="stext-111 cl-red d-block p-t-5" style="font-size: 12px; font-weight: bold; color: #dc3545;">Mã: PBALL10</span>
+               {{-- DANH SÁCH VOUCHER --}}
+                <div style="max-height: 350px; overflow-y: auto; padding-right: 5px;">
+                    @forelse($availableCoupons as $c)
+                        @php 
+                            // Xử lý Logic UX: Kiểm tra xem đơn hàng có đủ điều kiện Min Order không
+                            $isEligible = $subTotal >= $c->min_order_value; 
+                            $missingAmount = $c->min_order_value - $subTotal;
+                        @endphp
+                        
+                        {{-- ĐÃ THÊM CLASS js-coupon-item ĐỂ CLICK VÀO LÀ CHỌN LUÔN --}}
+                        <div class="flex-w flex-sb-m p-all-15 bg0 m-b-15 {{ $isEligible ? 'pointer js-coupon-item' : '' }}" style="border-radius: 5px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); border-left: 4px solid {{ $isEligible ? '#dc3545' : '#b2b2b2' }}; position: relative; opacity: {{ $isEligible ? '1' : '0.6' }}; transition: 0.2s;">
+                            <div style="width: 75%;">
+                                <span class="stext-105 cl2 font-weight-bold d-block p-b-5" style="font-size: 16px;">
+                                    @if($c->discount_type == 'percent')
+                                        GIẢM {{ $c->discount_value }}%
+                                    @else
+                                        GIẢM {{ number_format($c->discount_value) }}đ
+                                    @endif
+                                </span>
+                                
+                                <span class="stext-111 cl6 d-block" style="font-size: 12px; line-height: 1.4;">
+                                    Đơn tối thiểu {{ number_format($c->min_order_value) }}đ. 
+                                    @if($c->discount_type == 'percent' && $c->max_discount_value > 0)
+                                        Giảm tối đa {{ number_format($c->max_discount_value) }}đ.
+                                    @endif
+                                </span>
+
+                                {{-- BỔ SUNG: NGÀY HẾT HẠN & LƯỢT DÙNG --}}
+                                <span class="stext-111 cl6 d-block p-t-5 p-b-5" style="font-size: 11px;">
+                                    <i class="zmdi zmdi-time text-danger"></i> HSD: 
+                                    @if($c->end_date)
+                                        {{ \Carbon\Carbon::parse($c->end_date)->format('d/m/Y') }}
+                                    @else
+                                        Không giới hạn
+                                    @endif
+                                    
+                                    <span style="margin: 0 5px;">|</span>
+                                    
+                                    <i class="zmdi zmdi-shopping-cart text-success"></i> Còn: {{ $c->quantity }} lượt
+                                </span>
+                                
+                                <span class="stext-111 d-block" style="font-size: 12px; font-weight: bold; color: {{ $isEligible ? '#dc3545' : '#666' }};">
+                                    Mã: {{ $c->code }}
+                                </span>
+
+                                @if(!$isEligible)
+                                    <span class="stext-111 d-block p-t-5 text-warning" style="font-size: 11px; font-style: italic;">
+                                        (Mua thêm {{ number_format($missingAmount) }}đ để dùng được mã này)
+                                    </span>
+                                @endif
+                            </div>
+                            
+                            <div style="width: 20%; text-align: right;">
+                                @if($isEligible)
+                                    <input type="radio" name="select_coupon_radio" value="{{ $c->code }}" style="transform: scale(1.5); cursor: pointer;" class="js-radio-coupon">
+                                @else
+                                    <input type="radio" disabled title="Chưa đủ điều kiện" style="transform: scale(1.5);">
+                                @endif
+                            </div>
                         </div>
-                        <div style="width: 20%; text-align: right;">
-                            <input type="radio" name="select_coupon_radio" value="PBALL10" style="transform: scale(1.5); cursor: pointer;" class="js-radio-coupon">
+                    @empty
+                        <div class="text-center p-t-20 p-b-20">
+                            <i class="zmdi zmdi-card-off" style="font-size: 40px; color: #ccc;"></i>
+                            <p class="stext-111 cl6 m-t-10">Hiện tại chưa có mã giảm giá nào phù hợp.</p>
                         </div>
-                    </div>
+                    @endforelse
                 </div>
             </div>
-            <div class="modal-footer" style="border-top: none; background: #fff;">
-                <button type="button" class="stext-101 cl6 p-lr-15 pointer" data-dismiss="modal" style="background: none; border: none; font-weight: 500;">TRỞ LẠI</button>
-                <button type="button" class="flex-c-m stext-101 cl0 bg-danger bor1 hov-btn1 p-lr-25 trans-04 pointer js-confirm-coupon" style="height: 40px; border-radius: 3px; font-weight: bold;">
-                    ĐỒNG Ý
-                </button>
+            
+            {{-- NÚT XÁC NHẬN NẰM Ở ĐÂY --}}
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-dismiss="modal" style="border-radius: 3px;">Trở lại</button>
+                <button type="button" class="btn btn-danger js-confirm-coupon" style="border-radius: 3px;">Xác nhận chọn</button>
             </div>
         </div>
     </div>
 </div>
 
 <style>
-    /* CSS hiệu ứng Payment Box */
     .payment-method-box { background-color: #fff; transition: all 0.3s ease; }
     .payment-method-box:hover { background-color: #f8f9fa; border-color: #ccc; }
-    
-    /* CSS cho trạng thái Active */
     .payment-method-box.active-payment { border-color: #dc3545 !important; background-color: #fffafb !important; }
     .payment-method-box.active-payment span.stext-105 { color: #dc3545 !important; }
+    .bor-red { border-color: #dc3545 !important; }
+    .hov-bg-light:hover { background-color: #f8f9fa; }
+    .select2-container .select2-selection--single { height: 45px; border: 1px solid #e6e6e6; border-radius: 3px; outline: none; }
+    .select2-container--default .select2-selection--single .select2-selection__rendered { line-height: 45px; padding-left: 20px; color: #555; font-size: 13px; }
+    .select2-container--default .select2-selection--single .select2-selection__arrow { height: 43px; right: 10px; }
+    .select2-dropdown { border: 1px solid #e6e6e6; border-radius: 3px; box-shadow: 0 5px 15px rgba(0,0,0,0.1); }
     
+    /* === ĐÃ FIX: Ép Modal phải nằm trên cùng, không bị Header che === */
+    .modal { z-index: 100000 !important; }
+    .modal-backdrop { z-index: 99999 !important; }
+    .payment-method-box { background-color: #fff; transition: all 0.3s ease; }
+    .payment-method-box:hover { background-color: #f8f9fa; border-color: #ccc; }
+    .payment-method-box.active-payment { border-color: #dc3545 !important; background-color: #fffafb !important; }
+    .payment-method-box.active-payment span.stext-105 { color: #dc3545 !important; }
     .bor-red { border-color: #dc3545 !important; }
     .hov-bg-light:hover { background-color: #f8f9fa; }
     .select2-container .select2-selection--single { height: 45px; border: 1px solid #e6e6e6; border-radius: 3px; outline: none; }
@@ -268,7 +350,6 @@
 
 <script>
     $(document).ready(function() {
-        // Javascript tự động đổi màu Khung thanh toán
         $('input[name="payment_method"]').on('change', function() {
             $('.payment-method-box').removeClass('active-payment');
             if($(this).is(':checked')) {
@@ -369,15 +450,24 @@
             });
         }
 
-        function refreshCheckoutCart() {
+       function refreshCheckoutCart() {
             $('.cart-loading-overlay').css('display', 'flex'); 
             $.ajax({
                 url: window.location.pathname,
                 type: 'GET',
                 success: function(data) {
                     var newHtml = $(data).find('#checkout-cart-wrapper').html();
+                    // === ĐÃ FIX: Lấy thêm HTML mới nhất của cái Modal từ Server ===
+                    var newModalHtml = $(data).find('#couponModal').html(); 
+
                     if(newHtml) {
                         $('#checkout-cart-wrapper').html(newHtml);
+                        
+                        // === ĐÃ FIX: Cập nhật lại giao diện của Modal (Sáng/Mờ/Báo thiếu tiền) ===
+                        if(newModalHtml) {
+                            $('#couponModal').html(newModalHtml);
+                        }
+
                         initUIComponents(); 
                         var newQty = $('.checkout-qty-total').first().text();
                         $('.icon-header-noti.js-show-cart').attr('data-notify', newQty);
@@ -462,22 +552,65 @@
         });
 
         $(document).on('click', '.js-show-coupon-modal', function() { $('#couponModal').modal('show'); });
+
+        // === THÊM MỚI TÍNH NĂNG COUPON: Logic AJAX gửi mã lên Server ===
         $(document).on('click', '.js-apply-manual-coupon', function() {
             var code = $('#manual_coupon_code').val().trim().toUpperCase();
-            if(code === '') { swal("Thông báo", "Vui lòng nhập mã Voucher!", "warning"); return; }
-            applyCouponCode(code);
+            if(code === '') { 
+                swal("Thông báo", "Vui lòng nhập mã Voucher!", "warning"); 
+                return; 
+            }
+            
+            let btn = $(this);
+            let oldText = btn.html();
+            btn.html('<i class="zmdi zmdi-spinner zmdi-hc-spin"></i>').prop('disabled', true);
+
+            $.ajax({
+                url: '{{ route("coupon.apply") }}',
+                type: 'POST',
+                data: {
+                    _token: '{{ csrf_token() }}',
+                    coupon_code: code
+                },
+                success: function(res) {
+                    btn.html(oldText).prop('disabled', false);
+
+                    if(res.success) {
+                        swal("Thành công!", res.msg, "success");
+                        
+                        // Cập nhật text UI
+                        $('#applied_coupon_code').val(code);
+                        $('#selected-coupon-text').text('Mã: ' + code).css({'color': '#dc3545', 'font-weight': 'bold'});
+                        $('#couponModal').modal('hide');
+
+                        // Hiển thị số tiền được giảm
+                        $('.discount-row').show();
+                        $('.discount-display').text('- ' + res.discount_amount);
+                        
+                        // Cập nhật lại Tổng tiền
+                        $('#final-total-display').text(res.new_total);
+
+                    } else {
+                        swal("Rất tiếc!", res.msg, "error");
+                    }
+                },
+                error: function() {
+                    btn.html(oldText).prop('disabled', false);
+                    swal("Lỗi!", "Có lỗi kết nối máy chủ.", "error");
+                }
+            });
         });
+
         $(document).on('click', '.js-confirm-coupon', function() {
             var selectedRadio = $('input[name="select_coupon_radio"]:checked');
-            if(selectedRadio.length > 0) applyCouponCode(selectedRadio.val());
-            else $('#couponModal').modal('hide'); 
+            if(selectedRadio.length > 0) {
+                $('#manual_coupon_code').val(selectedRadio.val());
+                $('.js-apply-manual-coupon').click(); // Tái sử dụng logic gọi AJAX
+            } else {
+                $('#couponModal').modal('hide'); 
+            }
         });
-        function applyCouponCode(code) {
-            $('#applied_coupon_code').val(code);
-            $('#selected-coupon-text').text('Mã: ' + code).css({'color': '#dc3545', 'font-weight': 'bold'});
-            $('#couponModal').modal('hide');
-            swal("Thành công", "Tính năng Mã giảm giá đang được phát triển, mã " + code + " đã được ghi nhận!", "success");
-        }
+        // === KẾT THÚC THÊM MỚI COUPON ===
 
         $(document).on('click', '.js-btn-checkout', function(e) {
             e.preventDefault(); 
@@ -487,7 +620,7 @@
             $('.js-custom-error').remove(); 
 
             if (isNewAddress) {
-                var fields = ['customer_name', 'customer_phone', 'email'];
+                var fields = ['customer_name', 'customer_phone', 'email', 'customer_email'];
                 for (var i = 0; i < fields.length; i++) {
                     var input = form.find('input[name="' + fields[i] + '"]')[0];
                     if (input && !input.checkValidity()) {
@@ -538,6 +671,15 @@
             btn.html('<i class="zmdi zmdi-spinner zmdi-hc-spin m-r-10 fs-20"></i> ĐANG CHỐT ĐƠN...');
             btn.css('opacity', '0.7').css('pointer-events', 'none');
             form[0].submit(); 
+
+        
+        });
+            // Bấm vào khu vực thẻ Coupon sẽ tự động tick cái nút Radio bên trong
+        $(document).on('click', '.js-coupon-item', function() {
+            var radioBtn = $(this).find('input[type="radio"]');
+            if (!radioBtn.prop('disabled')) {
+                radioBtn.prop('checked', true);
+            }
         });
     });
 </script>

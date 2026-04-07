@@ -8,10 +8,11 @@ class Order extends Model
 {
     protected $table = 'orders';
     
-
     protected $fillable = [
         'order_code',
         'user_id',
+        'coupon_id',
+        'discount_amount',
         'customer_name',    
         'customer_phone',   
         'customer_email',    
@@ -30,6 +31,8 @@ class Order extends Model
         'note',
     ];
 
+   
+
     public function items()
     {
         return $this->hasMany(OrderItem::class);
@@ -43,5 +46,11 @@ class Order extends Model
     public function user()
     {
         return $this->belongsTo(User::class, 'user_id');
+    }
+
+    // Quan hệ với Coupon (Phục vụ cho trang chi tiết đơn hàng Admin nếu cần)
+    public function coupon()
+    {
+        return $this->belongsTo(Coupon::class, 'coupon_id');
     }
 }

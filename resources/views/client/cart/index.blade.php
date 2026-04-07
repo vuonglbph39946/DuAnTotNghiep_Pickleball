@@ -99,10 +99,7 @@
                 </div>
                 @endforeach
 
-                <div class="m-t-20 p-all-20 bg0 shadow-sm" style="border: 1px solid #f0f0f0; border-radius: 8px;">
-                    <span class="stext-105 cl2 font-weight-bold d-block m-b-10">Ghi chú đơn hàng</span>
-                    <textarea class="stext-111 cl2 plh3 size-120 p-lr-15 p-tb-15" name="note" placeholder="Ghi chú về đơn hàng, ví dụ: thời gian hay chỉ dẫn địa điểm giao hàng chi tiết hơn." style="border: 1px solid #e6e6e6; border-radius: 4px; width: 100%; resize: none;"></textarea>
-                </div>
+                
             @endif
         </div>
 

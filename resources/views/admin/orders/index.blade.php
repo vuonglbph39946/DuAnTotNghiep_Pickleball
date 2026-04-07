@@ -339,6 +339,8 @@
                 $('#searchSuggestions').addClass('d-none');
             }
         });
+
+        
     });
 </script>
 @endpush

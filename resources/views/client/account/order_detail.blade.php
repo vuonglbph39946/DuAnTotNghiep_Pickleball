@@ -113,11 +113,11 @@
                                                 </div>
                                             </div>
                                         </td>
-                                        <td class="text-center text-muted fw-medium" style="font-size: 15px;">₫{{ number_format($item->price, 0, ',', '.') }}</td>
+                                        <td class="text-center text-muted fw-medium" style="font-size: 15px;">{{ number_format($item->price, 0, ',', '.') }}₫</td>
                                         <td class="text-center">
                                             <span class="qty-badge">{{ $item->quantity }}</span>
                                         </td>
-                                        <td class="text-end pe-0 text-danger fw-bold" style="font-size: 15px;">₫{{ number_format($item->price * $item->quantity, 0, ',', '.') }}</td>
+                                        <td class="text-end pe-0 text-danger fw-bold" style="font-size: 15px;">{{ number_format($item->price * $item->quantity, 0, ',', '.') }}₫</td>
                                     </tr>
                                     @endforeach
                                 </tbody>
@@ -170,16 +170,16 @@
                             {{-- Chi tiết tiền --}}
                             <div class="d-flex justify-content-between align-items-center mb-3">
                                 <span class="text-muted fw-medium" style="white-space: nowrap; font-size: 15px;">Tạm tính:</span>
-                                <span class="text-dark fw-bold" style="white-space: nowrap; font-size: 16px;">₫{{ number_format($order->total_amount - $order->shipping_fee + $order->discount_amount, 0, ',', '.') }}</span>
+                                <span class="text-dark fw-bold" style="white-space: nowrap; font-size: 16px;">{{ number_format($order->total_amount - $order->shipping_fee + $order->discount_amount, 0, ',', '.') }}₫</span>
                             </div>
                             <div class="d-flex justify-content-between align-items-center mb-3">
                                 <span class="text-muted fw-medium" style="white-space: nowrap; font-size: 15px;">Phí vận chuyển:</span>
-                                <span class="text-dark fw-bold" style="white-space: nowrap; font-size: 16px;">₫{{ number_format($order->shipping_fee, 0, ',', '.') }}</span>
+                                <span class="text-dark fw-bold" style="white-space: nowrap; font-size: 16px;">{{ number_format($order->shipping_fee, 0, ',', '.') }}₫</span>
                             </div>
                             @if($order->discount_amount > 0)
                             <div class="d-flex justify-content-between align-items-center mb-3">
                                 <span class="text-muted fw-medium" style="white-space: nowrap; font-size: 15px;">Giảm giá:</span>
-                                <span class="text-success fw-bold" style="white-space: nowrap; font-size: 16px;">- ₫{{ number_format($order->discount_amount, 0, ',', '.') }}</span>
+                                <span class="text-success fw-bold" style="white-space: nowrap; font-size: 16px;">- {{ number_format($order->discount_amount, 0, ',', '.') }}₫</span>
                             </div>
                             @endif
 
@@ -189,7 +189,7 @@
                             {{-- TỔNG CỘNG --}}
                             <div class="d-flex justify-content-between align-items-center mb-4">
                                 <span class="fw-bold text-dark text-uppercase" style="font-size: 15px;">Tổng thanh toán:</span>
-                                <span class="text-danger fw-extrabold" style="font-size: 24px; line-height: 1;">₫{{ number_format($order->total_amount, 0, ',', '.') }}</span>
+                                <span class="text-danger fw-extrabold" style="font-size: 24px; line-height: 1;">{{ number_format($order->total_amount, 0, ',', '.') }}₫</span>
                             </div>
 
                             {{-- Box thông tin phương thức & trạng thái --}}
@@ -352,6 +352,8 @@
                 }
             });
         });
+
+        
     });
 </script>
 @endpush

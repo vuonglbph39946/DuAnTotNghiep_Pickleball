@@ -8,12 +8,21 @@ use App\Http\Controllers\Admin\CategoryController as AdminCategoryController;
 use App\Http\Controllers\Admin\ProductController;
 use App\Http\Controllers\Admin\AttributeController;
 use App\Http\Controllers\Admin\BannerController;
+
+// === ĐÃ THÊM MỚI: Import Controller của Admin ===
+use App\Http\Controllers\Admin\CouponController as AdminCouponController;
+
 use App\Http\Controllers\Client\HomeController;
 use App\Http\Controllers\Client\CategoryController as ClientCategoryController;
 use App\Http\Controllers\Client\ProductController as ClientProductController;
 use App\Http\Controllers\Client\AccountController;
 use App\Http\Controllers\Client\CartController;
 use App\Http\Controllers\Client\CheckoutController;
+
+// === ĐÃ THÊM MỚI: Import Controller của Client ===
+use App\Http\Controllers\Client\CouponController as ClientCouponController;
+
+
 use App\Http\Middleware\CheckAdmin;
 
 /*
@@ -59,6 +68,10 @@ Route::post('/checkout/process', [CheckoutController::class, 'process'])->name('
 Route::get('/checkout/vnpay-return', [App\Http\Controllers\Client\CheckoutController::class, 'vnpayReturn'])->name('checkout.vnpay_return');
 Route::get('/checkout/success/{order_code}', [CheckoutController::class, 'success'])->name('checkout.success');
 
+// === ĐÃ THÊM MỚI: Route áp dụng Mã Giảm Giá (AJAX) ===
+Route::post('/apply-coupon', [ClientCouponController::class, 'apply'])->name('coupon.apply');
+
+
 // ===============================================
 // 3. ROUTE CLIENT NỘI BỘ (YÊU CẦU ĐĂNG NHẬP)
 // ===============================================
@@ -69,6 +82,8 @@ Route::middleware(['auth'])->group(function () {
     
     // ĐÃ THÊM ROUTE NHẬN HÀNG Ở ĐÂY
     Route::post('/account/orders/{order_code}/receive', [AccountController::class, 'receiveOrder'])->name('account.orders.receive');
+    
+    
     
     Route::post('/account/update-profile', [AccountController::class, 'updateProfile'])->name('account.update_profile');
     Route::post('/account/update-password', [AccountController::class, 'updatePassword'])->name('account.update_password');
@@ -112,10 +127,11 @@ Route::prefix('admin')->middleware([CheckAdmin::class])->name('admin.')->group(f
     Route::resource('categories', AdminCategoryController::class);
     Route::resource('attributes', AttributeController::class);
     Route::resource('banners', BannerController::class);
+    
+    // === ĐÃ THÊM MỚI: Route CRUD cho Mã giảm giá (Admin) ===
+    Route::resource('coupons', AdminCouponController::class);
 
-    // =======================================================
-    // ĐÃ FIX: THÊM ROUTE CANCEL_REQUESTS LÊN TRƯỚC {id} VÀ ĐẶT NAME()
-    // =======================================================
+    
     
     Route::get('/orders', [OrderController::class, 'index'])->name('orders.index');
     Route::get('/orders/{id}', [OrderController::class, 'show'])->name('orders.show');
@@ -137,4 +153,5 @@ Route::prefix('admin')->middleware([CheckAdmin::class])->name('admin.')->group(f
     Route::get('/news', function () {
         return view('admin.news.index');
     })->name('news.index');
+
 });
