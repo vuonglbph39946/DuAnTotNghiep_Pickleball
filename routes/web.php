@@ -8,6 +8,7 @@ use App\Http\Controllers\Admin\CategoryController as AdminCategoryController;
 use App\Http\Controllers\Admin\ProductController;
 use App\Http\Controllers\Admin\AttributeController;
 use App\Http\Controllers\Admin\BannerController;
+use App\Http\Controllers\Admin\DashboardController;
 
 // === ĐÃ THÊM MỚI: Import Controller của Admin ===
 use App\Http\Controllers\Admin\CouponController as AdminCouponController;
@@ -106,9 +107,10 @@ Route::prefix('admin')->middleware([CheckAdmin::class])->name('admin.')->group(f
         return redirect()->route('admin.dashboard');
     });
 
-    Route::get('/dashboard', function () {
-        return view('admin.dashboard');
-    })->name('dashboard');
+    // ========================================================
+    // === ĐÃ SỬA: Chuyển Route Dashboard gọi vào Controller ===
+    // ========================================================
+    Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
 
     Route::get('/accounts', function () {
         return view('admin.accounts.index');
