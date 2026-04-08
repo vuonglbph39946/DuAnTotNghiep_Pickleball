@@ -49,4 +49,12 @@ class Product extends Model
     {
         return $this->hasMany(ProductVariant::class, 'product_id', 'id');
     }
+
+    // ==========================================
+    // LIÊN KẾT ĐẾN MODEL REVIEW (ĐÃ THÊM ĐỂ SỬA LỖI WHERE ON NULL)
+    // ==========================================
+    public function reviews()
+    {
+        return $this->hasMany(Review::class, 'product_id', 'id');
+    }
 }

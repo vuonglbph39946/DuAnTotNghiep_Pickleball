@@ -26,7 +26,8 @@ class AccountController extends Controller
         $addresses = $user->addresses()->orderBy('is_default', 'desc')->orderBy('created_at', 'desc')->get();
         
         // ĐÃ FIX: Gom đơn hàng theo user_id HOẶC customer_email
-        $query = Order::with(['items.product', 'items.variant'])
+        // ĐÃ TỐI ƯU: Thêm 'reviews' vào mảng Eager Loading để fix N+1 Query cho nút Đánh giá
+        $query = Order::with(['items.product', 'items.variant', 'reviews'])
             ->where(function($q) use ($user) {
                 $q->where('user_id', $user->id)
                   ->orWhere('customer_email', $user->email);
@@ -64,7 +65,8 @@ class AccountController extends Controller
         $user = Auth::user();
         
         // ĐÃ FIX: Cho phép xem nếu khớp ID HOẶC khớp Email
-        $order = Order::with(['items.product', 'items.variant', 'statusLogs' => function($q) {
+        // ĐÃ TỐI ƯU: Thêm 'reviews' để tránh N+1 nếu trong view chi tiết cũng dùng đến
+        $order = Order::with(['items.product', 'items.variant', 'reviews', 'statusLogs' => function($q) {
             $q->orderBy('id', 'desc');
         }])
         ->where(function($q) use ($user) {

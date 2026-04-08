@@ -53,5 +53,12 @@
       </a>
     </li>
 
+    <li class="nav-item">
+    <a class="nav-link" href="{{ route('admin.reviews.index') }}">
+        <i class="mdi mdi-star-circle-outline menu-icon"></i>
+        <span class="menu-title">Đánh Giá-Bình Luận</span>
+    </a>
+</li>
+
   </ul>
 </nav>

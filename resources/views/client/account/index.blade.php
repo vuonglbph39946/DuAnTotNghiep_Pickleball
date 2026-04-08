@@ -194,6 +194,10 @@
 
                             <div class="p-t-15 p-b-15" style="border-bottom: 1px solid #e6e6e6;">
                                 @foreach($order->items->take(2) as $item)
+                                @php
+                                    // ĐÃ FIX: Bỏ chữ clone đi để tránh lỗi __clone method called on non-object
+                                    $isReviewed = $order->reviews ? $order->reviews->contains('product_id', $item->product_id) : false;
+                                @endphp
                                 <div class="flex-w flex-m m-b-10">
                                     <a href="{{ $item->product ? url('product/'.$item->product->slug) : 'javascript:void(0)' }}" class="wrap-pic-w size-w-50 m-r-15 border rounded d-block" style="width: 60px; height: 60px; overflow: hidden;">
                                         <img src="{{ $item->product && $item->product->images->first() ? asset($item->product->images->first()->image_path) : 'https://placehold.co/60' }}" alt="IMG" style="width: 100%; height: 100%; object-fit: cover;">
@@ -207,8 +211,22 @@
                                         @endif
                                         <span class="stext-111 cl6 d-block">Số lượng: x{{ $item->quantity }}</span>
                                     </div>
-                                    <div class="ms-auto stext-102" style="color: #dc3545; font-weight: bold;">
-                                        {{ number_format($item->price) }}đ
+                                    <div class="ms-auto text-end">
+                                        <div class="stext-102" style="color: #dc3545; font-weight: bold;">
+                                            {{ number_format($item->price) }}đ
+                                        </div>
+                                        {{-- LOGIC NÚT ĐÁNH GIÁ NHỎ --}}
+                                        @if($order->order_status == 'completed' && $item->product)
+                                            @if(!$isReviewed)
+                                                <a href="{{ url('product/'.$item->product->slug . '?review=true') }}" class="stext-104 trans-04 d-block m-t-5" style="font-size: 13px; color: #ffc107; font-weight: 600; text-decoration: none;">
+                                                    <i class="fa fa-star"></i> Đánh giá
+                                                </a>
+                                            @else
+                                                <span class="stext-104 d-block m-t-5" style="font-size: 13px; color: #28a745; font-weight: 600;">
+                                                    <i class="fa fa-check-circle"></i> Đã đánh giá
+                                                </span>
+                                            @endif
+                                        @endif
                                     </div>
                                 </div>
                                 @endforeach
@@ -231,7 +249,6 @@
                                         Xem chi tiết
                                     </a>
 
-                                    {{-- ĐÃ FIX: Hiển thị Nút Hủy chung cho cả COD và Online, miễn là đang Pending hoặc Confirmed --}}
                                     @if(in_array($order->order_status, ['pending', 'confirmed']))
                                         <form action="{{ route('account.orders.cancel', $order->order_code) }}" method="POST" class="ms-2 mb-0">
                                             @csrf
@@ -241,7 +258,6 @@
                                         </form>
                                     @endif
 
-                                    {{-- NEW: Nút Đã nhận hàng (nếu đang giao) --}}
                                     @if($order->order_status == 'shipping')
                                         <form action="{{ route('account.orders.receive', $order->order_code) }}" method="POST" class="ms-2 mb-0">
                                             @csrf
@@ -250,9 +266,75 @@
                                             </button>
                                         </form>
                                     @endif
+
+                                    {{-- =============================================== --}}
+                                    {{-- TỐI ƯU UX: LOGIC NÚT ĐÁNH GIÁ CHÍNH + POPUP MODAL --}}
+                                    {{-- =============================================== --}}
+                                    @if($order->order_status == 'completed')
+                                        @php
+                                            // Lọc TẤT CẢ các món chưa review trong RAM
+                                            $unreviewedItems = $order->items->filter(function($item) use ($order) {
+                                                return $item->product && ($order->reviews ? !$order->reviews->contains('product_id', $item->product_id) : true);
+                                            });
+                                        @endphp
+                                        
+                                        @if($unreviewedItems->count() > 0)
+                                            @if($unreviewedItems->count() == 1)
+                                                {{-- Nếu chỉ 1 món chưa đánh giá -> Chuyển thẳng link --}}
+                                                @php $singleItem = $unreviewedItems->first(); @endphp
+                                                <a href="{{ url('product/'.$singleItem->product->slug . '?review=true') }}" class="btn flex-c-m stext-101 p-lr-20 trans-04 pointer fw-bold ms-2" style="height: 40px; border-radius: 3px; color: #fff; background-color: #ffc107; border-color: #ffc107; box-shadow: 0 2px 4px rgba(255,193,7,0.3);">
+                                                    Đánh giá
+                                                </a>
+                                            @else
+                                                {{-- Nếu có nhiều món -> Hiện nút bật Popup (Modal) --}}
+                                                <button type="button" data-toggle="modal" data-target="#modalReviewSelect-{{ $order->id }}" class="btn flex-c-m stext-101 p-lr-20 trans-04 pointer fw-bold ms-2" style="height: 40px; border-radius: 3px; color: #fff; background-color: #ffc107; border-color: #ffc107; box-shadow: 0 2px 4px rgba(255,193,7,0.3);">
+                                                    Đánh giá
+                                                </button>
+                                            @endif
+                                        @endif
+                                    @endif
                                 </div>
                             </div>
                         </div>
+
+                        {{-- POPUP CHỌN SẢN PHẨM ĐỂ ĐÁNH GIÁ (Render cùng Order) --}}
+                        @if($order->order_status == 'completed' && isset($unreviewedItems) && $unreviewedItems->count() > 1)
+                        <div class="modal fade" id="modalReviewSelect-{{ $order->id }}" tabindex="-1" role="dialog" aria-hidden="true" style="z-index: 105000;">
+                            <div class="modal-dialog modal-dialog-centered" role="document">
+                                <div class="modal-content" style="border-radius: 8px; border: none; box-shadow: 0 10px 30px rgba(0,0,0,0.1);">
+                                    <div class="modal-header" style="background-color: #f8f9fa; border-bottom: 1px solid #eee; border-radius: 8px 8px 0 0;">
+                                        <h5 class="modal-title fw-bold" style="font-size: 16px;">Chọn sản phẩm để đánh giá</h5>
+                                        <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                                            <span aria-hidden="true">&times;</span>
+                                        </button>
+                                    </div>
+                                    <div class="modal-body p-4">
+                                        @foreach($unreviewedItems as $item)
+                                            <div class="d-flex align-items-center mb-3 pb-3" style="border-bottom: 1px dashed #eee;">
+                                                <img src="{{ $item->product && $item->product->images->first() ? asset($item->product->images->first()->image_path) : 'https://placehold.co/60' }}" 
+                                                     class="rounded border" style="width: 50px; height: 50px; object-fit: cover; margin-right: 15px;">
+                                                
+                                                <div class="flex-grow-1" style="width: calc(100% - 160px);">
+                                                    <div class="fw-bold text-dark" style="font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+                                                        {{ $item->product->name }}
+                                                    </div>
+                                                    @if($item->variant_info)
+                                                        <div class="text-muted" style="font-size: 12px;">Phân loại: {{ $item->variant_info }}</div>
+                                                    @endif
+                                                </div>
+                                                
+                                                <a href="{{ url('product/'.$item->product->slug . '?review=true') }}" class="btn btn-sm ms-2 fw-bold" style="background-color: #ffc107; color: #fff; border-radius: 4px; font-size: 12px; white-space: nowrap;">
+                                                    Đánh giá ngay
+                                                </a>
+                                            </div>
+                                        @endforeach
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        @endif
+                        {{-- KẾT THÚC POPUP --}}
+                        
                         @endforeach
 
                         <div class="flex-col-c-m js-empty-order" style="display: {{ $orders->count() == 0 ? 'flex' : 'none' }}; background-color: #f8f9fa; border-radius: 8px; min-height: 300px;">

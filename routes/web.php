@@ -19,10 +19,11 @@ use App\Http\Controllers\Client\ProductController as ClientProductController;
 use App\Http\Controllers\Client\AccountController;
 use App\Http\Controllers\Client\CartController;
 use App\Http\Controllers\Client\CheckoutController;
+use App\Http\Controllers\Admin\ReviewController as AdminReviewController;
 
 // === ĐÃ THÊM MỚI: Import Controller của Client ===
 use App\Http\Controllers\Client\CouponController as ClientCouponController;
-
+use App\Http\Controllers\Client\ReviewController;
 
 use App\Http\Middleware\CheckAdmin;
 
@@ -85,7 +86,7 @@ Route::middleware(['auth'])->group(function () {
     Route::post('/account/orders/{order_code}/receive', [AccountController::class, 'receiveOrder'])->name('account.orders.receive');
     
     
-    
+    Route::post('/reviews/{product_id}', [ReviewController::class, 'store'])->name('client.reviews.store');
     Route::post('/account/update-profile', [AccountController::class, 'updateProfile'])->name('account.update_profile');
     Route::post('/account/update-password', [AccountController::class, 'updatePassword'])->name('account.update_password');
     Route::post('/account/addresses', [AccountController::class, 'storeAddress'])->name('account.addresses.store');
@@ -138,6 +139,12 @@ Route::prefix('admin')->middleware([CheckAdmin::class])->name('admin.')->group(f
     Route::get('/orders', [OrderController::class, 'index'])->name('orders.index');
     Route::get('/orders/{id}', [OrderController::class, 'show'])->name('orders.show');
     Route::get('/orders/{id}/print', [OrderController::class, 'print'])->name('orders.print');
+
+    // QUẢN LÝ ĐÁNH GIÁ (REVIEWS)
+    Route::get('/reviews', [AdminReviewController::class, 'index'])->name('reviews.index');
+    Route::post('/reviews/{id}/status', [AdminReviewController::class, 'updateStatus'])->name('reviews.update_status');
+    Route::delete('/reviews/{id}', [AdminReviewController::class, 'destroy'])->name('reviews.destroy');
+    Route::post('/reviews/{id}/reply', [AdminReviewController::class, 'reply'])->name('reviews.reply');
     
     // Khai báo Tên cho các Route xử lý logic Trạng thái
     Route::post('/orders/{id}/status', [OrderStatusController::class, 'updateStatus'])->name('orders.update_status');
