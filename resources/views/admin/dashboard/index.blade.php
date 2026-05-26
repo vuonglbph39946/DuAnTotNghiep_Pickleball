@@ -26,6 +26,15 @@
 
     {{-- TẦNG 1: 5 THẺ CHỈ SỐ CỐT LÕI (Sử dụng row-cols-md-5 để xếp 5 cột) --}}
     <div class="row row-cols-1 row-cols-md-5 g-3 mb-4">
+        {{-- ĐÃ SỬA 1: Đưa Tổng đơn hàng lên đầu tiên (Màu tím) --}}
+        <div class="col">
+            <div class="card shadow-sm border-0 text-white h-100" style="background-color: #6f42c1;">
+                <div class="card-body">
+                    <p class="mb-1 text-white-50 fw-bold text-uppercase">Tổng đơn hàng</p>
+                    <h5 class="fw-bold mb-0">{{ number_format($dashboardData['total_orders'] ?? 0) }} đơn</h5>
+                </div>
+            </div>
+        </div>
         <div class="col">
             <div class="card shadow-sm border-0 bg-primary text-white h-100">
                 <div class="card-body">
@@ -58,14 +67,6 @@
                 </div>
             </div>
         </div>
-        <div class="col">
-            <div class="card shadow-sm border-0 bg-warning text-dark h-100">
-                <div class="card-body">
-                    <p class="mb-1 fw-bold text-uppercase" style="color: #856404;">Đã giảm giá</p>
-                    <h5 class="fw-bold mb-0">{{ number_format($dashboardData['voucher_stats']['total_discount_given']) }} đ</h5>
-                </div>
-            </div>
-        </div>
     </div>
 
     {{-- TẦNG 2: 2 BIỂU ĐỒ (LINE 7 NGÀY & BAR 6 THÁNG) --}}
@@ -73,7 +74,13 @@
         <div class="col-lg-6">
             <div class="card shadow-sm border-0 h-100">
                 <div class="card-header bg-white pt-3 pb-2 border-0">
-                    <h6 class="fw-bold text-uppercase mb-0">Biểu đồ doanh thu theo ngày</h6>
+                    {{-- ĐÃ SỬA 2: Tiêu đề biểu đồ động theo Bộ lọc thời gian --}}
+                    <h6 class="fw-bold text-uppercase mb-0 text-primary">
+                        <i class="mdi mdi-trending-up me-1"></i> Doanh thu 
+                        @if($days == 7) 7 Ngày qua 
+                        @elseif($days == 30) 30 Ngày qua 
+                        @else (30 Ngày gần nhất) @endif
+                    </h6>
                 </div>
                 <div class="card-body">
                     <canvas id="revenueChart" height="150"></canvas>
@@ -83,7 +90,9 @@
         <div class="col-lg-6">
             <div class="card shadow-sm border-0 h-100">
                 <div class="card-header bg-white pt-3 pb-2 border-0">
-                    <h6 class="fw-bold text-uppercase mb-0">Doanh thu 6 tháng gần nhất</h6>
+                    <h6 class="fw-bold text-uppercase mb-0 text-success">
+                        <i class="mdi mdi-poll me-1"></i> Doanh thu 6 tháng gần nhất
+                    </h6>
                 </div>
                 <div class="card-body">
                     <canvas id="monthlyChart" height="150"></canvas>

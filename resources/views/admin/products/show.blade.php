@@ -38,17 +38,7 @@
                         <div>
                             <h4 class="fw-extrabold text-main mb-1">{{ $product->name }}</h4>
                             
-                            {{-- ĐÁNH GIÁ SAO (RATING) --}}
-                            <div class="d-flex align-items-center mb-3">
-                                <div class="text-warning me-2" style="font-size: 0.95rem;">
-                                    <i class="fa-solid fa-star"></i>
-                                    <i class="fa-solid fa-star"></i>
-                                    <i class="fa-solid fa-star"></i>
-                                    <i class="fa-solid fa-star"></i>
-                                    <i class="fa-solid fa-star-half-stroke"></i>
-                                </div>
-                                <span class="text-muted fw-bold" style="font-size: 0.85rem;">(4.8/5 - 128 Đánh giá)</span>
-                            </div>
+                           
 
                             <span class="badge bg-body-custom text-primary border border-primary-subtle px-3 py-2 fw-semibold" style="font-size: 0.85rem; border-color: var(--primary-light) !important;">
                                 <i class="fa-solid fa-folder-tree me-1"></i> {{ $product->category->name ?? 'Không xác định' }}

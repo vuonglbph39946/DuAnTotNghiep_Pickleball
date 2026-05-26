@@ -12,6 +12,7 @@ use App\Http\Controllers\Admin\DashboardController;
 
 // === ĐÃ THÊM MỚI: Import Controller của Admin ===
 use App\Http\Controllers\Admin\CouponController as AdminCouponController;
+use App\Http\Controllers\Admin\UserController; // <--- KHAI BÁO USER CONTROLLER Ở ĐÂY
 
 use App\Http\Controllers\Client\HomeController;
 use App\Http\Controllers\Client\CategoryController as ClientCategoryController;
@@ -58,6 +59,13 @@ Route::get('/category/{slug}', [ClientCategoryController::class, 'show']);
 Route::get('/product/{slug}', [ClientProductController::class, 'show']);
 Route::get('/search', [HomeController::class, 'search'])->name('search');
 Route::get('/api/search-suggest', [HomeController::class, 'searchSuggest']);
+Route::get('/gioi-thieu', function () {
+    // Sửa chữ 'about' thành 'client.about' (Tức là chỉ đường cho Laravel vào thư mục client để tìm file)
+    return view('client.about'); 
+})->name('about');
+Route::get('/contact', function () {
+    return view('client.contact'); 
+})->name('contact');
 
 Route::post('/cart/add', [CartController::class, 'add'])->name('cart.add');
 Route::get('/cart/render', [CartController::class, 'renderCart'])->name('cart.render');
@@ -65,9 +73,8 @@ Route::get('/cart', [CartController::class, 'index'])->name('cart.index');
 Route::post('/cart/update', [CartController::class, 'update'])->name('cart.update');
 Route::post('/cart/remove', [CartController::class, 'remove'])->name('cart.remove');
  
-Route::get('/checkout', [CheckoutController::class, 'index'])->name('checkout.index');
-Route::post('/checkout/process', [CheckoutController::class, 'process'])->name('checkout.process');
-Route::get('/checkout/vnpay-return', [App\Http\Controllers\Client\CheckoutController::class, 'vnpayReturn'])->name('checkout.vnpay_return');
+// VẪN GIỮ 2 ROUTE NÀY Ở NGOÀI ĐỂ VNPAY CÓ THỂ ĐẨY DATA VỀ ĐƯỢC
+Route::get('/checkout/vnpay-return', [CheckoutController::class, 'vnpayReturn'])->name('checkout.vnpay_return');
 Route::get('/checkout/success/{order_code}', [CheckoutController::class, 'success'])->name('checkout.success');
 
 // === ĐÃ THÊM MỚI: Route áp dụng Mã Giảm Giá (AJAX) ===
@@ -78,13 +85,17 @@ Route::post('/apply-coupon', [ClientCouponController::class, 'apply'])->name('co
 // 3. ROUTE CLIENT NỘI BỘ (YÊU CẦU ĐĂNG NHẬP)
 // ===============================================
 Route::middleware(['auth'])->group(function () {
+    
+    // === ĐÃ CHUYỂN VÀO ĐÂY: Bắt buộc đăng nhập để thanh toán ===
+    Route::get('/checkout', [CheckoutController::class, 'index'])->name('checkout.index');
+    Route::post('/checkout/process', [CheckoutController::class, 'process'])->name('checkout.process');
+    
     Route::get('/account', [AccountController::class, 'index'])->name('account.index');
     Route::get('/account/orders/{order_code}', [AccountController::class, 'showOrder'])->name('account.orders.show');
     Route::post('/account/orders/{order_code}/cancel', [AccountController::class, 'cancelOrder'])->name('account.orders.cancel');
     
     // ĐÃ THÊM ROUTE NHẬN HÀNG Ở ĐÂY
     Route::post('/account/orders/{order_code}/receive', [AccountController::class, 'receiveOrder'])->name('account.orders.receive');
-    
     
     Route::post('/reviews/{product_id}', [ReviewController::class, 'store'])->name('client.reviews.store');
     Route::post('/account/update-profile', [AccountController::class, 'updateProfile'])->name('account.update_profile');
@@ -113,6 +124,10 @@ Route::prefix('admin')->middleware([CheckAdmin::class])->name('admin.')->group(f
     // ========================================================
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
 
+    // === QUẢN LÝ NGƯỜI DÙNG ===
+    Route::get('/users', [UserController::class, 'index'])->name('users.index');
+    Route::post('/users/{id}/toggle-status', [UserController::class, 'toggleStatus'])->name('users.toggle_status');
+
     Route::get('/accounts', function () {
         return view('admin.accounts.index');
     })->name('accounts.index');
@@ -134,9 +149,8 @@ Route::prefix('admin')->middleware([CheckAdmin::class])->name('admin.')->group(f
     // === ĐÃ THÊM MỚI: Route CRUD cho Mã giảm giá (Admin) ===
     Route::resource('coupons', AdminCouponController::class);
 
-    
-    
     Route::get('/orders', [OrderController::class, 'index'])->name('orders.index');
+    Route::get('/orders-cancel-requests', [OrderController::class, 'cancelRequests'])->name('orders.cancel_requests');
     Route::get('/orders/{id}', [OrderController::class, 'show'])->name('orders.show');
     Route::get('/orders/{id}/print', [OrderController::class, 'print'])->name('orders.print');
 
@@ -148,7 +162,11 @@ Route::prefix('admin')->middleware([CheckAdmin::class])->name('admin.')->group(f
     
     // Khai báo Tên cho các Route xử lý logic Trạng thái
     Route::post('/orders/{id}/status', [OrderStatusController::class, 'updateStatus'])->name('orders.update_status');
+    
+    // === ĐÃ BỔ SUNG: CÁC ROUTE PHỤC VỤ DUYỆT HỦY ĐƠN & HOÀN TIỀN VNPAY ===
+    Route::post('/orders/{id}/approve-cancel', [OrderStatusController::class, 'approveCancel'])->name('orders.approve_cancel');
     Route::post('/orders/{id}/reject-cancel', [OrderStatusController::class, 'rejectCancel'])->name('orders.reject_cancel');
+    Route::post('/orders/{id}/refund-vnpay', [OrderStatusController::class, 'refundVNPay'])->name('orders.refund_vnpay');
     Route::post('/orders/{id}/undo', [OrderStatusController::class, 'undo'])->name('orders.undo');
 
     Route::get('/roles', function () {

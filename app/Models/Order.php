@@ -29,6 +29,7 @@ class Order extends Model
         'payment_method',
         'order_status',
         'note',
+        'cancel_reason'
     ];
 
    

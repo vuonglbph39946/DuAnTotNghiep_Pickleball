@@ -18,6 +18,7 @@ class Payment extends Model
         'payment_status',
         'amount',
         'status',
+        'vnp_refund_transaction_no'
     ];
 
     // Tạo liên kết ngược lại với đơn hàng

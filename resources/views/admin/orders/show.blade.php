@@ -4,6 +4,8 @@
 
 @section('content')
 <meta name="csrf-token" content="{{ csrf_token() }}">
+{{-- Load thư viện SweetAlert cho Popup xịn --}}
+<script src="https://unpkg.com/sweetalert/dist/sweetalert.min.js"></script>
 
 @php
     $sum = 0;
@@ -16,24 +18,27 @@
         'confirmed' => 'Đã xác nhận',
         'shipping' => 'Đang giao hàng',
         'completed' => 'Hoàn thành',
+        'cancel_requested' => 'Yêu cầu hủy',
         'cancelled' => 'Đã huỷ',
         'returned' => 'Trả hàng'
     ];
 
     // ================= LOGIC ĐÓNG BĂNG ĐƠN HÀNG VÀ THANH TOÁN =================
-    $isOrderFrozen = in_array($order->order_status, ['cancelled', 'completed', 'returned']);
+    $isOrderFrozen = in_array($order->order_status, ['cancel_requested', 'cancelled', 'completed', 'returned']);
     
     $isPaymentFrozen = false;
     if ($order->payment_status == 'refunded') {
         $isPaymentFrozen = true; 
+    } elseif ($order->order_status == 'cancel_requested') {
+        $isPaymentFrozen = true;
+    } elseif ($order->order_status == 'cancelled' && $order->payment_method == 'vnpay') {
+        $isPaymentFrozen = true;
     } elseif ($order->payment_status == 'paid' && $order->payment_method == 'cod') {
-        // Đơn COD thu tiền xong -> Khóa vĩnh viễn không cho sửa
         $isPaymentFrozen = true; 
     } elseif ($order->payment_status == 'paid' && in_array($order->order_status, ['shipping', 'completed'])) {
-        // Đơn Online đã thanh toán & Đang/Đã giao -> Khóa vĩnh viễn (Vì cấm hoàn tiền lúc này)
         $isPaymentFrozen = true; 
     } elseif (in_array($order->order_status, ['cancelled', 'returned'])) {
-        if ($order->payment_status == 'paid' && $order->payment_method != 'cod') {
+        if ($order->payment_status == 'paid' && !in_array($order->payment_method, ['cod', 'vnpay'])) {
             $isPaymentFrozen = false; 
         } else {
             $isPaymentFrozen = true; 
@@ -41,7 +46,6 @@
     }
 @endphp
 
-{{-- KHỐI NÀY SẼ ĐƯỢC AJAX CẬP NHẬT TOÀN BỘ --}}
 <div id="orderContentAjax">
 
     {{-- ================= HEADER ================= --}}
@@ -86,6 +90,85 @@
             <i class="mdi mdi-printer me-1"></i> In vận đơn
         </a>
     </div>
+
+    {{-- ========================================================================================== --}}
+    {{-- KHU VỰC XỬ LÝ YÊU CẦU HỦY ĐƠN & KÍCH HOẠT HOÀN TIỀN VNPAY --}}
+    {{-- ========================================================================================== --}}
+    
+    @if($order->order_status == 'cancel_requested')
+    <div class="alert alert-warning border-warning shadow-sm mb-4 p-4 rounded-3">
+        <div class="d-flex align-items-center justify-content-between flex-wrap g-3">
+            <div>
+                <h5 class="fw-bold text-dark mb-1">
+                    <i class="mdi mdi-alert-decagram text-warning me-2" style="font-size: 22px;"></i>
+                    Khách hàng đang gửi yêu cầu hủy đơn hàng này!
+                </h5>
+                <p class="mb-0 text-muted mt-2" style="font-size: 0.95rem;">
+                    <strong>Lý do hủy:</strong> 
+                    <span class="text-danger fw-semibold bg-white px-2 py-1 rounded border border-danger-subtle ms-1">
+                        {{ $order->cancel_reason ?? 'Khách không để lại lý do cụ thể' }}
+                    </span>
+                </p>
+            </div>
+            <div class="d-flex gap-2">
+                <form action="{{ route('admin.orders.reject_cancel', $order->id) }}" method="POST" id="formRejectCancel" class="mb-0">
+                    @csrf
+                    <button type="button" class="btn btn-outline-dark fw-bold px-3 py-2 js-btn-reject-cancel">
+                        Từ chối hủy
+                    </button>
+                </form>
+                
+                <form action="{{ route('admin.orders.approve_cancel', $order->id) }}" method="POST" id="formApproveCancel" class="mb-0">
+                    @csrf
+                    <button type="button" class="btn btn-danger fw-bold px-4 py-2 text-white shadow-sm js-btn-approve-cancel">
+                        <i class="mdi mdi-check-all me-1"></i> Đồng ý Hủy Đơn
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+    @endif
+
+    @if($order->order_status == 'cancelled' && $order->payment_method == 'vnpay' && $order->payment_status == 'paid')
+    <div class="alert alert-danger border-danger shadow-sm mb-4 p-4 rounded-3" style="background-color: #fff5f5;">
+        <div class="d-flex align-items-center justify-content-between flex-wrap g-3">
+            <div>
+                <h5 class="fw-bold text-danger mb-1">
+                    <i class="mdi mdi-cash-refund me-2" style="font-size: 22px;"></i>
+                    Đơn hàng cần hoàn trả lại tiền!
+                </h5>
+                <p class="mb-0 text-dark mt-2" style="font-size: 0.95rem;">
+                    Đơn hàng này đã bị hủy
+                    <strong class="text-danger fs-6">{{ number_format($order->total_amount) }} đ</strong>. hoàn tiền.
+                </p>
+            </div>
+            <div>
+                <form action="{{ route('admin.orders.refund_vnpay', $order->id) }}" method="POST" id="formRefundVNPay" class="mb-0">
+                    @csrf
+                    <button type="button" class="btn btn-danger fw-bold shadow px-4 py-2 text-white js-btn-refund-vnpay">
+                        <i class="mdi mdi-bank-transfer me-1"></i> HOÀN TIỀN
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+    @endif
+    
+    {{-- HIỂN THỊ MINH CHỨNG HOÀN TIỀN (NẾU CÓ) --}}
+    @if($order->payment_status == 'refunded')
+        @php
+            $paymentInfo = \App\Models\Payment::where('order_id', $order->id)->where('payment_status', 'success')->where('payment_gateway', 'vnpay')->first();
+        @endphp
+        <div class="alert alert-success shadow-sm mb-4 p-3 rounded-3 d-flex align-items-center">
+            <i class="mdi mdi-check-decagram text-success me-3" style="font-size: 30px;"></i>
+            <div>
+                <h6 class="fw-bold text-success mb-1">Hệ thống đã hoàn tiền tự động qua VNPay thành công!</h6>
+                @if($paymentInfo && $paymentInfo->vnp_refund_transaction_no)
+                    <p class="mb-0 text-dark small">Mã giao dịch hoàn tiền : <strong>{{ $paymentInfo->vnp_refund_transaction_no }}</strong></p>
+                @endif
+            </div>
+        </div>
+    @endif
 
     {{-- ================= THANH TIẾN TRÌNH TRÊN CÙNG ================= --}}
     <div class="card shadow-sm border-0 mb-4 rounded-3">
@@ -245,6 +328,10 @@
                         <div class="col-6 mb-2">
                             <label class="small fw-bold text-muted mb-1">Trạng thái đơn</label>
                             <select id="statusSelect" onchange="enableSaveOrderBtn()" class="form-select custom-select-fix shadow-none fw-semibold" style="font-size: 0.85rem;" {{ $isOrderFrozen ? 'disabled' : '' }}>
+                                @if($current == 'cancel_requested')
+                                    <option value="cancel_requested" selected disabled>Yêu cầu hủy</option>
+                                @endif
+                                
                                 @foreach(['pending','confirmed','shipping','completed','cancelled'] as $st)
                                     @php
                                         $disabled = 'disabled'; 
@@ -253,11 +340,9 @@
                                                 if ($current !== 'shipping') $disabled = ''; 
                                             } else {
                                                 $stIndex = array_search($st, $steps);
-                                                // Mở khóa cho bước tiếp theo
                                                 if ($stIndex !== false && $stIndex === $currentIndex + 1) $disabled = ''; 
                                             }
                                         }
-                                        // Vô hiệu hóa tùy chọn hiện tại để không cho bấm lại
                                         if ($st === $current) {
                                             $disabled = 'disabled';
                                         }
@@ -272,21 +357,25 @@
                             <label class="small fw-bold text-muted mb-1">Thanh toán</label>
                             <select id="paymentStatusSelect" onchange="enableSavePaymentBtn()" class="form-select custom-select-fix shadow-none fw-semibold" style="font-size: 0.85rem;" {{ $isPaymentFrozen ? 'disabled' : '' }}>
                                 
-                                <option value="unpaid" {{ $order->payment_status == 'unpaid' ? 'selected disabled' : 'disabled' }}>⏳ Chưa Thanh Toán</option>
+                                <option value="unpaid" {{ $order->payment_status == 'unpaid' ? 'selected disabled' : 'disabled' }}>Chưa Thanh Toán</option>
                                 
                                 <option value="paid" 
                                     {{ $order->payment_status == 'paid' ? 'selected disabled' : '' }} 
-                                    {{ (in_array($order->payment_method, ['vnpay', 'momo']) && $order->payment_status == 'unpaid') ? 'disabled' : '' }}>
-                                    ✅ Đã Thanh Toán
+                                    {{ (in_array($order->payment_method, ['vnpay', 'momo']) && $order->payment_status == 'unpaid') ? 'disabled' : '' }}
+                                    {{ ($order->payment_method == 'cod' && $order->payment_status == 'unpaid') ? 'disabled' : '' }}>
+                                    Đã Thanh Toán
                                 </option>
                                 
                                 @if($order->payment_method != 'cod')
-                                    @php
-                                        // KHÓA HOÀN TIỀN NẾU ĐƠN ĐANG GIAO HOẶC ĐÃ GIAO HOẶC CHƯA TRẢ TIỀN
-                                        $disableRefund = ($order->payment_status != 'paid' || in_array($order->order_status, ['shipping', 'completed']));
-                                    @endphp
-                                    <option value="refunded" {{ $order->payment_status == 'refunded' ? 'selected disabled' : '' }} {{ $disableRefund ? 'disabled' : '' }}>💸 Hoàn Tiền</option>
-                                @endif
+    @php
+        // ĐÃ SỬA: Khóa cứng tùy chọn Hoàn tiền thủ công nếu là đơn hàng thanh toán qua cổng Online (vnpay, momo)
+        // Ép buộc Admin chỉ được hoàn tiền thông qua nút bấm gọi API ở Banner
+        $disableRefund = ($order->payment_status != 'paid' 
+            || in_array($order->order_status, ['shipping', 'completed']) 
+            || in_array($order->payment_method, ['vnpay', 'momo']));
+    @endphp
+    <option value="refunded" {{ $order->payment_status == 'refunded' ? 'selected disabled' : '' }} {{ $disableRefund ? 'disabled' : '' }}> Hoàn Tiền</option>
+@endif
                                 
                             </select>
                         </div>
@@ -294,14 +383,14 @@
                         {{-- Nút Lưu Trạng thái (Mặc định bị tắt) --}}
                         <div class="col-6">
                             <button onclick="handleUpdateOrder()" id="btnUpdateOrder" class="btn btn-primary w-100 fw-bold p-2 text-white" style="font-size: 0.8rem;" disabled>
-                                <i class="mdi mdi-content-save-outline me-1"></i>Lưu đơn
+                                <i class="mdi mdi-content-save-outline me-1"></i>Lưu
                             </button>
                         </div>
 
                         {{-- Nút Lưu Thanh toán (Mặc định bị tắt) --}}
                         <div class="col-6">
                             <button onclick="updatePayment()" id="btnUpdatePayment" class="btn btn-success w-100 fw-bold p-2 text-white" style="font-size: 0.8rem;" disabled>
-                                <i class="mdi mdi-cash-check me-1"></i>Lưu thanh toán
+                                <i class="mdi mdi-cash-check me-1"></i>Lưu
                             </button>
                         </div>
                     </div>
@@ -334,7 +423,6 @@
                         {{ $order->specific_address ? $order->specific_address . ($order->ward_name ? ', ' . $order->ward_name : '') . ($order->district_name ? ', ' . $order->district_name : '') . ', ' . $order->province_name : 'Chưa có địa chỉ' }}
                     </p>
 
-                    {{-- === ĐÃ BỔ SUNG: HIỂN THỊ GHI CHÚ CỦA KHÁCH HÀNG LÀM NỔI BẬT === --}}
                     @if($order->note)
                         <div class="alert alert-warning p-2 mb-4 shadow-sm" style="border-left: 4px solid #ffc107; font-size: 0.9rem; background-color: #fffbeb;">
                             <strong class="text-dark"><i class="mdi mdi-message-text-outline me-1"></i>Ghi chú từ khách:</strong> 
@@ -366,7 +454,6 @@
                             <span class="fw-bold text-dark">{{ number_format($order->shipping_fee ?? 0) }} đ</span>
                         </div>
 
-                        {{-- === ĐÃ BỔ SUNG: HIỂN THỊ SỐ TIỀN ĐƯỢC GIẢM QUA VOUCHER === --}}
                         @if($order->discount_amount > 0)
                         <div class="d-flex justify-content-between mb-2">
                             <span class="text-muted small">Giảm giá Voucher:
@@ -398,7 +485,6 @@
     .custom-select-fix option { color: #212529 !important; background-color: #ffffff !important; font-weight: 500; }
     .custom-select-fix option:disabled { color: #adb5bd !important; }
     
-    /* Làm mờ nút khi bị disabled */
     button:disabled { opacity: 0.6; cursor: not-allowed; }
 
     /* CSS CHO STEAMER TIẾN TRÌNH */
@@ -427,7 +513,66 @@
 <div id="toast" class="toast"><i class="mdi mdi-check-circle me-2"></i>Cập nhật thành công</div>
 
 <script>
-// Mở khóa nút bấm khi có sự thay đổi
+// SCRIPT POPUP SWEETALERT CHO CÁC NÚT ĐỒNG Ý / TỪ CHỐI / HOÀN TIỀN
+document.addEventListener('DOMContentLoaded', function() {
+    
+    // Nút Từ chối hủy
+    const btnReject = document.querySelector('.js-btn-reject-cancel');
+    if(btnReject) {
+        btnReject.addEventListener('click', function(e) {
+            e.preventDefault();
+            swal({
+                title: "Từ chối hủy đơn?",
+                text: "Bạn có chắc chắn muốn từ chối yêu cầu hủy và tiếp tục giao gói hàng này không?",
+                icon: "warning",
+                buttons: ["Đóng lại", "Từ chối hủy"],
+                dangerMode: true,
+            }).then((willReject) => {
+                if (willReject) document.getElementById('formRejectCancel').submit();
+            });
+        });
+    }
+
+    // Nút Đồng ý hủy
+    const btnApprove = document.querySelector('.js-btn-approve-cancel');
+    if(btnApprove) {
+        btnApprove.addEventListener('click', function(e) {
+            e.preventDefault();
+            swal({
+                title: "Xác nhận hủy đơn?",
+                text: "Hệ thống sẽ ĐỒNG Ý HỦY, tự động hoàn trả lại Tồn kho sản phẩm và khôi phục Mã giảm giá. Tiếp tục?",
+                icon: "warning",
+                buttons: ["Hủy thao tác", "Đồng ý Hủy"],
+                dangerMode: true,
+            }).then((willApprove) => {
+                if (willApprove) document.getElementById('formApproveCancel').submit();
+            });
+        });
+    }
+
+    // Nút Hoàn tiền VNPay
+    const btnRefund = document.querySelector('.js-btn-refund-vnpay');
+    if(btnRefund) {
+        btnRefund.addEventListener('click', function(e) {
+            e.preventDefault();
+            swal({
+                title: "Thực hiện hoàn tiền qua VNPay?",
+                text: "Hệ thống sẽ gửi mã API bảo mật sang VNPay để tự động hoàn số tiền {{ number_format($order->total_amount) }}đ về thẻ gốc của khách hàng. Thao tác này không thể thu hồi!",
+                icon: "info",
+                buttons: ["Hủy bỏ", "Thực hiện hoàn tiền"],
+                dangerMode: true,
+            }).then((willRefund) => {
+                if (willRefund) {
+                    btnRefund.innerHTML = '<i class="mdi mdi-loading mdi-spin me-1"></i> ĐANG XỬ LÝ...';
+                    btnRefund.disabled = true;
+                    document.getElementById('formRefundVNPay').submit();
+                }
+            });
+        });
+    }
+});
+
+
 function enableSaveOrderBtn() {
     document.getElementById('btnUpdateOrder').disabled = false;
 }
@@ -437,7 +582,6 @@ function enableSavePaymentBtn() {
 
 function sendAjaxRequest(url, bodyData, successMsg, bgColor, btnId, originalHtml) {
     let btnUp = document.getElementById(btnId);
-    
     if(btnUp) {
         btnUp.innerHTML = '<i class="mdi mdi-loading mdi-spin me-1"></i>Đang lưu...';
         btnUp.disabled = true;
@@ -477,7 +621,7 @@ function sendAjaxRequest(url, bodyData, successMsg, bgColor, btnId, originalHtml
         showToast(error.message, "#dc3545");
         if(btnUp) {
             btnUp.innerHTML = originalHtml;
-            btnUp.disabled = false; // Mở lại cho bấm nếu bị lỗi backend
+            btnUp.disabled = false; 
         }
     });
 }
@@ -536,7 +680,15 @@ function showToast(msg, bgColor){
     setTimeout(()=>t.classList.remove('show'), 3000); 
 }
 
+document.addEventListener('DOMContentLoaded', function() {
+    @if(session('success'))
+        showToast("{{ session('success') }}", "#198754"); // Màu xanh lá
+    @endif
 
+    @if(session('error'))
+        showToast("{{ session('error') }}", "#dc3545"); // Màu đỏ
+    @endif
+});
 </script>
 
 <div id="imagePopupModal" class="cancel-modal" onclick="closeImageModal()">
@@ -557,5 +709,4 @@ function showToast(msg, bgColor){
         </div>
     </div>
 </div>
-
 @endsection

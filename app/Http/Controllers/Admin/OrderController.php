@@ -69,5 +69,30 @@ class OrderController extends Controller
         return view('admin.orders.print', compact('order'));
     }
 
+    public function cancelRequests(Request $request)
+    {
+        $admin = (object)[
+            'full_name' => 'Admin Test',
+            'avatar' => 'default-avatar.png'
+        ];
+
+        // Chỉ truy vấn các đơn hàng có trạng thái đang chờ xử lý hủy
+        $query = Order::where('order_status', 'cancel_requested')->latest();
+
+        // Xử lý chức năng tìm kiếm nâng cao theo mã đơn hoặc tên khách hàng
+        if ($request->filled('search')) {
+            $search = $request->search;
+            $query->where(function($q) use ($search) {
+                $q->where('order_code', 'like', "%{$search}%")
+                  ->orWhere('customer_name', 'like', "%{$search}%");
+            });
+        }
+
+        // Phân trang dữ liệu hiển thị (15 đơn mỗi trang) để tối ưu tốc độ tải
+        $cancelOrders = $query->paginate(15)->withQueryString();
+        $totalRequests = $cancelOrders->total();
+
+        return view('admin.orders.cancel_requests', compact('cancelOrders', 'totalRequests', 'admin'));
+    }
     
 }

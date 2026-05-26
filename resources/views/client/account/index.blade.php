@@ -569,18 +569,32 @@
             $('#modalAddAddress').modal('show');
         @endif
 
-        // SCRIPT XÁC NHẬN HỦY ĐƠN HÀNG
+        // SCRIPT XÁC NHẬN HỦY ĐƠN HÀNG (ĐÃ CẬP NHẬT YÊU CẦU LÝ DO)
         $('.js-btn-cancel-order').on('click', function(e) {
             e.preventDefault();
             var form = $(this).closest('form');
+            
             swal({
                 title: "Xác nhận hủy đơn?",
-                text: "Bạn có chắc chắn muốn hủy đơn hàng này không? Thao tác này không thể hoàn tác.",
+                text: "Vui lòng nhập lý do bạn muốn hủy đơn hàng này (Bắt buộc):",
+                content: "input",
                 icon: "warning",
-                buttons: ["Đóng lại", "Đồng ý hủy"],
+                buttons: ["Đóng lại", "Gửi yêu cầu hủy"],
                 dangerMode: true,
-            }).then(function(willCancel) {
-                if (willCancel) {
+            }).then(function(reason) {
+                if (reason === "") {
+                    swal("Lỗi!", "Bạn bắt buộc phải nhập lý do hủy đơn!", "error");
+                    return false;
+                }
+                
+                if (reason) {
+                    // Tạo một input ẩn chứa lý do hủy và nhét vào form trước khi gửi
+                    $('<input>').attr({
+                        type: 'hidden',
+                        name: 'cancel_reason',
+                        value: reason
+                    }).appendTo(form);
+                    
                     form.submit();
                 }
             });

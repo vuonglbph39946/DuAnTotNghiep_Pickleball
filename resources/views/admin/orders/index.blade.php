@@ -103,7 +103,7 @@
                                     </td>
                                     
                                     {{-- Cột 4: Trạng Thái Đơn Hàng --}}
-                                    <td>
+                                   <td>
                                         @if($order->order_status == 'pending')
                                             <span class="badge badge-opacity-warning border border-warning">Chờ xác nhận</span>
                                         @elseif($order->order_status == 'confirmed')
@@ -112,6 +112,13 @@
                                             <span class="badge badge-opacity-primary border border-primary">Đang giao</span>
                                         @elseif($order->order_status == 'completed')
                                             <span class="badge badge-opacity-success border border-success">Hoàn thành</span>
+                                        
+                                        {{-- BỔ SUNG TRẠNG THÁI YÊU CẦU HỦY Ở ĐÂY --}}
+                                        @elseif($order->order_status == 'cancel_requested')
+                                            <span class="badge badge-opacity-warning border border-warning text-danger fw-bold">
+                                                <i class="mdi mdi-alert-circle-outline me-1"></i>Yêu cầu hủy
+                                            </span>
+                                            
                                         @elseif($order->order_status == 'cancelled')
                                             <span class="badge badge-opacity-danger border border-danger">Đã huỷ</span>
                                         @else

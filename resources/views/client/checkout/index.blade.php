@@ -29,79 +29,69 @@
     <form action="{{ route('checkout.process') }}" method="POST" id="checkoutForm">
         @csrf
         <div class="row">
-            <div class="col-md-7 col-lg-7 m-b-30">
-                <div class="p-all-30 bor10 bg0 shadow-sm m-b-30">
-                    <div class="flex-w flex-sb-m p-b-20" style="border-bottom: 1px solid #e6e6e6; margin-bottom: 20px;">
-                        <h4 class="mtext-105 cl2" style="font-weight: 600;">1. Thông tin giao hàng</h4>
-                        @guest
-                            <span class="stext-102 cl6">Bạn đã có tài khoản? <a href="{{ route('login') }}?redirect={{ urlencode(route('checkout.index')) }}" class="cl-red" style="color: #dc3545; font-weight: bold; text-decoration: underline;">Đăng nhập ngay</a></span>
-                        @else
-                            <span class="stext-102 cl6">Xin chào, {{ Auth::user()->name }}! <a href="{{ route('logout') }}?redirect={{ urlencode(route('checkout.index')) }}" class="cl-red" style="color: #dc3545; font-weight: bold; text-decoration: underline;">Đăng xuất</a></span>
-                        @endguest
-                    </div>
-                    
-                    @auth
-                        @if($addresses->count() > 0)
-                            <div class="p-b-20 m-b-20" style="border-bottom: 1px dashed #e6e6e6;">
-                                <label class="flex-w flex-m pointer m-b-15">
-                                    <input type="radio" name="address_type" value="existing" {{ old('address_type', 'existing') == 'existing' ? 'checked' : '' }} class="js-toggle-addr" style="transform: scale(1.3); margin-right: 10px;">
-                                    <span class="stext-105 cl2 font-weight-bold" style="font-size: 16px;">Chọn địa chỉ đã lưu</span>
-                                </label>
-                                
-                                <div id="existing_address_block" class="p-l-25">
-                                    @foreach($addresses as $addr)
-                                    <label class="flex-w p-all-15 pointer m-b-10" style="border: 1px solid {{ $addr->is_default ? '#dc3545' : '#e6e6e6' }}; border-radius: 5px; transition: 0.3s; {{ $addr->is_default ? 'background-color: #fffafb;' : '' }}">
-                                        <div class="m-r-15 p-t-5">
-                                            <input type="radio" name="address_id" value="{{ $addr->id }}" {{ (old('address_id') == $addr->id || (is_null(old('address_id')) && $addr->is_default)) ? 'checked' : '' }} style="transform: scale(1.3);">
-                                        </div>
-                                        <div style="flex: 1;">
-                                            <span class="stext-105 cl2 font-weight-bold" style="font-size: 15px;">{{ $addr->customer_name }}</span>
-                                            <span class="stext-111 cl6 m-l-5 m-r-5">|</span>
-                                            <span class="stext-111 cl2 font-weight-bold">{{ $addr->customer_phone }}</span>
-                                            @if($addr->is_default) <span class="badge badge-danger m-l-10">Mặc định</span> @endif
-                                            <p class="stext-111 cl6 p-t-5">{{ $addr->specific_address }}, {{ $addr->ward_name }}, {{ $addr->district_name }}, {{ $addr->province_name }}</p>
-                                        </div>
-                                    </label>
-                                    @endforeach
-                                </div>
-                            </div>
-                        @else
-                            <input type="hidden" name="address_type" value="new">
-                            <div class="alert alert-warning m-b-20">Bạn chưa có địa chỉ, vui lòng nhập thông tin bên dưới:</div>
-                        @endif
-
-                        <label class="flex-w flex-m pointer m-b-15">
-                            <input type="radio" name="address_type" value="new" {{ old('address_type') == 'new' ? 'checked' : '' }} class="js-toggle-addr" {{ $addresses->count() == 0 ? 'checked' : '' }} style="transform: scale(1.3); margin-right: 10px;">
-                            <span class="stext-105 cl2 font-weight-bold" style="font-size: 16px;">Sử dụng địa chỉ mới</span>
-                        </label>
-
-                        <div id="new_address_block" style="display: {{ (old('address_type') == 'new' || $addresses->count() == 0) ? 'block' : 'none' }}; padding: 20px; background: #f8f9fa; border-radius: 5px; border: 1px solid #eee;">
-                            @include('client.partials.manual-form')
+          <div class="col-md-7 col-lg-7 m-b-30">
+    <div class="p-all-30 bor10 bg0 shadow-sm m-b-30">
+        <div class="flex-w flex-sb-m p-b-20" style="border-bottom: 1px solid #e6e6e6; margin-bottom: 20px;">
+            <h4 class="mtext-105 cl2" style="font-weight: 600;">1. Thông tin giao hàng</h4>
+            {{-- Lời chào mặc định cho user đã đăng nhập --}}
+            <span class="stext-102 cl6">Xin chào, <strong style="color: #dc3545; font-size: 15px;">{{ Auth::user()->name }}</strong>!</span>
+        </div>
+        
+        @if($addresses->count() > 0)
+            <div class="p-b-20 m-b-20" style="border-bottom: 1px dashed #e6e6e6;">
+                <label class="flex-w flex-m pointer m-b-15">
+                    <input type="radio" name="address_type" value="existing" {{ old('address_type', 'existing') == 'existing' ? 'checked' : '' }} class="js-toggle-addr" style="transform: scale(1.3); margin-right: 10px;">
+                    <span class="stext-105 cl2 font-weight-bold" style="font-size: 16px;">Chọn địa chỉ đã lưu</span>
+                </label>
+                
+                <div id="existing_address_block" class="p-l-25">
+                    @foreach($addresses as $addr)
+                    <label class="flex-w p-all-15 pointer m-b-10" style="border: 1px solid {{ $addr->is_default ? '#dc3545' : '#e6e6e6' }}; border-radius: 5px; transition: 0.3s; {{ $addr->is_default ? 'background-color: #fffafb;' : '' }}">
+                        <div class="m-r-15 p-t-5">
+                            <input type="radio" name="address_id" value="{{ $addr->id }}" {{ (old('address_id') == $addr->id || (is_null(old('address_id')) && $addr->is_default)) ? 'checked' : '' }} style="transform: scale(1.3);">
                         </div>
-
-                    @else
-                        <div id="new_address_block">
-                            @include('client.partials.manual-form')
+                        <div style="flex: 1;">
+                            <span class="stext-105 cl2 font-weight-bold" style="font-size: 15px;">{{ $addr->customer_name }}</span>
+                            <span class="stext-111 cl6 m-l-5 m-r-5">|</span>
+                            <span class="stext-111 cl2 font-weight-bold">{{ $addr->customer_phone }}</span>
+                            @if($addr->is_default) <span class="badge badge-danger m-l-10">Mặc định</span> @endif
+                            <p class="stext-111 cl6 p-t-5">{{ $addr->specific_address }}, {{ $addr->ward_name }}, {{ $addr->district_name }}, {{ $addr->province_name }}</p>
                         </div>
-                    @endauth
-                </div>
-
-                <div class="p-all-30 bor10 bg0 shadow-sm">
-                    <h4 class="mtext-105 cl2 p-b-20" style="border-bottom: 1px solid #e6e6e6; font-weight: 600;">2. Phương thức thanh toán <span class="text-danger">*</span></h4>
-                    
-                    <div class="p-t-20">
-                        <label class="payment-method-box flex-w flex-m p-all-15 pointer m-b-15" for="payment_cod" style="border: 1px solid #e6e6e6; border-radius: 5px; cursor: pointer; display: flex; align-items: center;">
-                            <input type="radio" id="payment_cod" name="payment_method" value="cod" {{ old('payment_method', 'cod') == 'cod' ? 'checked' : '' }} style="transform: scale(1.3); margin-right: 15px; cursor: pointer;">
-                            <span class="stext-105 cl2 font-weight-bold" style="font-size: 15px; transition: 0.3s;">Thanh toán khi nhận hàng (COD)</span>
-                        </label>
-
-                        <label class="payment-method-box flex-w flex-m p-all-15 pointer m-b-15" for="payment_vnpay" style="border: 1px solid #e6e6e6; border-radius: 5px; cursor: pointer; display: flex; align-items: center;">
-                            <input type="radio" id="payment_vnpay" name="payment_method" value="vnpay" {{ old('payment_method') == 'vnpay' ? 'checked' : '' }} style="transform: scale(1.3); margin-right: 15px; cursor: pointer;">
-                            <span class="stext-105 cl2 font-weight-bold" style="font-size: 15px; transition: 0.3s;">Thanh toán trực tuyến (VNPAY)</span>
-                        </label>
-                    </div>
+                    </label>
+                    @endforeach
                 </div>
             </div>
+        @else
+            <input type="hidden" name="address_type" value="new">
+            <div class="alert alert-warning m-b-20">Bạn chưa có địa chỉ, vui lòng nhập thông tin bên dưới:</div>
+        @endif
+
+        <label class="flex-w flex-m pointer m-b-15" style="{{ $addresses->count() == 0 ? 'display:none;' : '' }}">
+            <input type="radio" name="address_type" value="new" {{ old('address_type') == 'new' ? 'checked' : '' }} class="js-toggle-addr" {{ $addresses->count() == 0 ? 'checked' : '' }} style="transform: scale(1.3); margin-right: 10px;">
+            <span class="stext-105 cl2 font-weight-bold" style="font-size: 16px;">Sử dụng địa chỉ mới</span>
+        </label>
+
+        <div id="new_address_block" style="display: {{ (old('address_type') == 'new' || $addresses->count() == 0) ? 'block' : 'none' }}; padding: 20px; background: #f8f9fa; border-radius: 5px; border: 1px solid #eee;">
+            @include('client.partials.manual-form')
+        </div>
+    </div>
+
+    <div class="p-all-30 bor10 bg0 shadow-sm">
+        <h4 class="mtext-105 cl2 p-b-20" style="border-bottom: 1px solid #e6e6e6; font-weight: 600;">2. Phương thức thanh toán <span class="text-danger">*</span></h4>
+        
+        <div class="p-t-20">
+            <label class="payment-method-box flex-w flex-m p-all-15 pointer m-b-15" for="payment_cod" style="border: 1px solid #e6e6e6; border-radius: 5px; cursor: pointer; display: flex; align-items: center;">
+                <input type="radio" id="payment_cod" name="payment_method" value="cod" {{ old('payment_method', 'cod') == 'cod' ? 'checked' : '' }} style="transform: scale(1.3); margin-right: 15px; cursor: pointer;">
+                <span class="stext-105 cl2 font-weight-bold" style="font-size: 15px; transition: 0.3s;">Thanh toán khi nhận hàng (COD)</span>
+            </label>
+
+            <label class="payment-method-box flex-w flex-m p-all-15 pointer m-b-15" for="payment_vnpay" style="border: 1px solid #e6e6e6; border-radius: 5px; cursor: pointer; display: flex; align-items: center;">
+                <input type="radio" id="payment_vnpay" name="payment_method" value="vnpay" {{ old('payment_method') == 'vnpay' ? 'checked' : '' }} style="transform: scale(1.3); margin-right: 15px; cursor: pointer;">
+                <span class="stext-105 cl2 font-weight-bold" style="font-size: 15px; transition: 0.3s;">Thanh toán trực tuyến (VNPAY)</span>
+            </label>
+        </div>
+    </div>
+</div>
 
             <div class="col-md-5 col-lg-5 m-b-30">
                 <div class="p-all-30 bor10 bg0 shadow-sm" style="border: 1px solid #e6e6e6;">

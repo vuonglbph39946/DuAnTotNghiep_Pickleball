@@ -48,7 +48,7 @@
                 <table class="table align-middle premium-table mb-0">
                     <thead>
                         <tr>
-                            <th style="width: 10%;">Danh Mục</th>
+                            <th style="width: 10%;">STT</th>
                             <th style="width: 15%;">Hình ảnh</th>
                             <th style="width: 35%;">Tên danh mục</th>
                             <th style="width: 20%;">Trạng thái</th>
@@ -69,7 +69,7 @@
 
                             {{-- DÒNG HIỂN THỊ DANH MỤC CHA --}}
                             <tr>
-                                <td class="ps-3 py-3"><span class="fw-bold text-dark">#{{ $category->id }}</span></td>
+                                <td class="ps-3 py-3"><span class="fw-bold text-dark">{{ $loop->iteration }}</span></td>
                                 <td>
                                     @if($category->image)
                                         <div class="product-img-premium shadow-sm popup-trigger" onclick="openImageModal('{{ asset($category->image) }}')">
@@ -108,7 +108,7 @@
                             {{-- VÒNG LẶP HIỂN THỊ CÁC DANH MỤC CON NẰM NGAY DƯỚI CHA --}}
                             @foreach($category->children as $child)
                                 <tr class="child-row">
-                                    <td class="ps-3 py-3"><span class="fw-medium text-muted">#{{ $child->id }}</span></td>
+                                   <td class="ps-3 py-3"><span class="fw-medium text-muted">{{ $loop->parent->iteration }}.{{ $loop->iteration }}</span></td>
                                     <td>
                                         @if($child->image)
                                             <div class="product-img-premium shadow-sm popup-trigger" style="width: 45px; height: 45px;" onclick="openImageModal('{{ asset($child->image) }}')">

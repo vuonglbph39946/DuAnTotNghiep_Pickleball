@@ -61,11 +61,9 @@ class CheckoutController extends Controller
         $totalAmount = $subTotal + $shippingFee - $discountAmount;
         if ($totalAmount < 0) $totalAmount = 0; // Chống âm tiền
 
-        $addresses = collect(); 
-        if (Auth::check()) {
-            $user = Auth::user();
-            $addresses = UserAddress::where('user_id', $user->id)->get();
-        }
+        // === ĐÃ DỌN DẸP: Bỏ if(Auth::check()) vì Route đã bắt buộc đăng nhập ===
+        $user = Auth::user();
+        $addresses = UserAddress::where('user_id', $user->id)->get();
 
         $availableCoupons = \App\Models\Coupon::where('status', 1)
             ->where('quantity', '>', 0)
@@ -73,16 +71,15 @@ class CheckoutController extends Controller
             ->whereDate('end_date', '>=', now())
             ->get();
 
-        if (Auth::check()) {
-            $userId = Auth::id();
-            $availableCoupons = $availableCoupons->filter(function($coupon) use ($userId) {
-                $usageCount = \DB::table('coupon_user')
-                    ->where('coupon_id', $coupon->id)
-                    ->where('user_id', $userId)
-                    ->count();
-                return $usageCount < $coupon->max_usage_per_user;
-            });
-        }
+        // === ĐÃ DỌN DẸP: Bỏ if(Auth::check()) ===
+        $userId = $user->id;
+        $availableCoupons = $availableCoupons->filter(function($coupon) use ($userId) {
+            $usageCount = \DB::table('coupon_user')
+                ->where('coupon_id', $coupon->id)
+                ->where('user_id', $userId)
+                ->count();
+            return $usageCount < $coupon->max_usage_per_user;
+        });
 
         return view('client.checkout.index', compact('cart', 'subTotal', 'shippingFee', 'discountAmount', 'couponCode', 'totalAmount', 'addresses', 'availableCoupons'));
     }
@@ -117,7 +114,6 @@ class CheckoutController extends Controller
         try {
             $customer_name = "";
             $customer_phone = "";
-            $customer_email = "";
             $province_id = "";
             $province_name = "";
             $district_id = "";
@@ -126,12 +122,15 @@ class CheckoutController extends Controller
             $ward_name = "";
             $specific_address = "";
 
+            // === ĐÃ DỌN DẸP: Luôn lấy email của user đang đăng nhập ===
+            $user = Auth::user();
+            $customer_email = $user->email;
+
             if ($request->address_id) {
                 $address = UserAddress::find($request->address_id);
                 if ($address) {
                     $customer_name = $address->customer_name;
                     $customer_phone = $address->customer_phone;
-                    $customer_email = Auth::user()->email ?? 'guest@example.com';
                     $province_id = $address->province_id;
                     $province_name = $address->province_name;
                     $district_id = $address->district_id;
@@ -143,7 +142,6 @@ class CheckoutController extends Controller
             } else {
                 $customer_name = $request->customer_name;
                 $customer_phone = $request->customer_phone;
-                $customer_email = $request->customer_email ?? $request->email ?? 'guest_' . time() . '@example.com';
                 $province_id = $request->province_id;
                 $province_name = $request->province_name;
                 $district_id = $request->district_id;
@@ -201,7 +199,7 @@ class CheckoutController extends Controller
                 $couponCode = $appliedCoupon['code'];
                 
                 // Trọng tâm chống Hack: Dùng Service đã Inject, tham số $lock = true
-                $couponResult = $couponService->validateAndCalculate($couponCode, $subTotal, Auth::id(), true);
+                $couponResult = $couponService->validateAndCalculate($couponCode, $subTotal, $user->id, true);
                 
                 if ($couponResult['success']) {
                     $discountAmount = $couponResult['discount_amount']; // Lấy tiền giảm CHUẨN từ Backend tính toán lại
@@ -218,7 +216,7 @@ class CheckoutController extends Controller
 
             $order = Order::create([
                 'order_code' => $orderCode,
-                'user_id' => Auth::id() ?? null,
+                'user_id' => $user->id, // === ĐÃ DỌN DẸP: Bỏ ?? null ===
                 'coupon_id' => $couponId,              
                 'discount_amount' => $discountAmount,  
                 'total_amount' => $totalAmount,
@@ -254,13 +252,12 @@ class CheckoutController extends Controller
             if ($couponId) {
                 \App\Models\Coupon::where('id', $couponId)->decrement('quantity', 1);
                 
-                if (Auth::check()) {
-                    DB::table('coupon_user')->insert([
-                        'coupon_id' => $couponId,
-                        'user_id' => Auth::id(),
-                        'used_at' => now()
-                    ]);
-                }
+                // === ĐÃ DỌN DẸP: Bỏ if (Auth::check()) ===
+                DB::table('coupon_user')->insert([
+                    'coupon_id' => $couponId,
+                    'user_id' => $user->id,
+                    'used_at' => now()
+                ]);
             }
 
             // Lưu dữ liệu vào DB
@@ -277,8 +274,8 @@ class CheckoutController extends Controller
             if ($request->payment_method == 'vnpay') {
                 $vnp_Url = env('VNP_URL', "https://sandbox.vnpayment.vn/paymentv2/vpcpay.html");
                 $vnp_Returnurl = env('VNP_RETURN_URL', url('/checkout/vnpay-return'));
-                $vnp_TmnCode = env('VNP_TMN_CODE', "8FH097LV");
-                $vnp_HashSecret = env('VNP_HASH_SECRET', "BJ08XFLOMBM5L0FRX8XTA9WY5SW97FR9");
+                $vnp_TmnCode = env('VNP_TMN_CODE', "334KPU27");
+                $vnp_HashSecret = env('VNP_HASH_SECRET', "Q4EXRFYNPBWN6T1LSKLHIP3VCCTMGWMA");
 
                 $vnp_TxnRef = $order->order_code;
                 $vnp_OrderInfo = $order->order_code; 
@@ -330,7 +327,8 @@ class CheckoutController extends Controller
             // NẾU LÀ COD: GỬI MAIL, XÓA GIỎ HÀNG VÀ SANG SUCCESS
             // ==========================================
             try {
-                if (filter_var($order->customer_email, FILTER_VALIDATE_EMAIL) && !str_contains($order->customer_email, 'guest_')) {
+                // === ĐÃ DỌN DẸP: Không cần check 'guest_' nữa ===
+                if ($order->customer_email) {
                     Mail::to($order->customer_email)->send(new OrderSuccessMail($order));
                 }
             } catch (\Throwable $e) {
@@ -348,7 +346,7 @@ class CheckoutController extends Controller
 
     public function vnpayReturn(Request $request)
     {
-        $vnp_HashSecret = env('VNP_HASH_SECRET', "BJ08XFLOMBM5L0FRX8XTA9WY5SW97FR9");
+        $vnp_HashSecret = env('VNP_HASH_SECRET', "Q4EXRFYNPBWN6T1LSKLHIP3VCCTMGWMA");
         $inputData = array();
         
         foreach ($request->all() as $key => $value) {
@@ -394,7 +392,8 @@ class CheckoutController extends Controller
                     ]);
                     
                     try {
-                        if (filter_var($order->customer_email, FILTER_VALIDATE_EMAIL) && !str_contains($order->customer_email, 'guest_')) {
+                        // === ĐÃ DỌN DẸP: Không cần check 'guest_' nữa ===
+                        if ($order->customer_email) {
                             Mail::to($order->customer_email)->send(new OrderSuccessMail($order));
                         }
                     } catch (\Throwable $e) {

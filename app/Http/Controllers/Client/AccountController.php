@@ -242,67 +242,55 @@ class AccountController extends Controller
         return back()->with('success_address', 'Đã xóa địa chỉ!');
     }
     
-    public function cancelOrder($order_code, Request $request)
+   // ==========================================
+    // XỬ LÝ HỦY ĐƠN HÀNG (PHÍA KHÁCH HÀNG)
+    // ==========================================
+   public function cancelOrder(Request $request, $order_code)
     {
+        // 1. Bắt buộc khách hàng phải chọn hoặc nhập lý do hủy đơn
+        $request->validate([
+            'cancel_reason' => 'required|string|max:500'
+        ], [
+            'cancel_reason.required' => 'Vui lòng nhập hoặc chọn lý do bạn muốn hủy đơn hàng này.'
+        ]);
+
         try {
-            DB::beginTransaction();
-            $user = Auth::user();
-            
-            // ĐÃ FIX: Hủy đơn nếu khớp ID HOẶC Email
-            $order = Order::with(['items.product', 'items.variant'])
-                ->where('order_code', $order_code)
-                ->where(function($q) use ($user) {
-                    $q->where('user_id', $user->id)
-                      ->orWhere('customer_email', $user->email);
-                })
-                ->lockForUpdate()
-                ->firstOrFail();
+            \Illuminate\Support\Facades\DB::beginTransaction();
 
+            // 2. Tìm đơn hàng bảo mật theo đúng mã order_code (ĐÃ FIX TẠI ĐÂY)
+            $order = Order::where('order_code', $order_code)
+                          ->where(function($q) {
+                              $q->where('user_id', Auth::id())
+                                ->orWhere('customer_email', Auth::user()->email);
+                          })
+                          ->lockForUpdate()
+                          ->firstOrFail();
+
+            // 3. Kiểm tra điều kiện trạng thái: Chỉ cho phép gửi yêu cầu khi đơn ở trạng thái pending hoặc confirmed
             if (!in_array($order->order_status, ['pending', 'confirmed'])) {
-                DB::rollBack();
-                return back()->with('error_order', 'Không thể hủy vì đơn hàng đã bắt đầu được giao!');
+                throw new \Exception('Không thể thao tác! Chỉ có thể gửi yêu cầu hủy khi đơn hàng ở trạng thái Chờ xác nhận hoặc Đã xác nhận.');
             }
 
-            if ($order->order_status == 'confirmed') {
-                foreach ($order->items as $item) {
-                    if ($item->product) Product::where('id', $item->product_id)->increment('stock', $item->quantity);
-                    if ($item->product_variant_id && $item->variant) ProductVariant::where('id', $item->product_variant_id)->increment('stock', $item->quantity);
-                }
-            }
+            // 4. Đồng nhất chuyển đổi trạng thái sang "Yêu cầu hủy" (cancel_requested)
+            $order->order_status = 'cancel_requested';
+            $order->cancel_reason = $request->input('cancel_reason');
+            $order->save();
 
-            $order->update(['order_status' => 'cancelled']);
-            OrderStatusLog::create(['order_id' => $order->id, 'status' => 'cancelled', 'created_at' => now()]);
+            // 5. Ghi nhật ký lịch sử chuyển trạng thái hệ thống
+            \App\Models\OrderStatusLog::create([
+                'order_id' => $order->id,
+                'status' => 'cancel_requested',
+                'created_at' => now()
+            ]);
 
-            // ========================================================
-            // ĐÃ BỔ SUNG: HOÀN LẠI VOUCHER KHI KHÁCH TỰ HỦY ĐƠN
-            // ========================================================
-            if ($order->coupon_id) {
-                // Cộng lại 1 lượt cho kho tổng
-                \App\Models\Coupon::where('id', $order->coupon_id)->increment('quantity', 1);
-                
-                // Xóa 1 lượt dùng trong lịch sử của khách này
-                if ($order->user_id) {
-                    \Illuminate\Support\Facades\DB::table('coupon_user')
-                        ->where('coupon_id', $order->coupon_id)
-                        ->where('user_id', $order->user_id)
-                        ->limit(1)
-                        ->delete();
-                }
-            }
+            $message = 'Đã gửi yêu cầu hủy đơn hàng thành công! Vui lòng chờ Shop kiểm tra và duyệt yêu cầu.';
 
-            if ($order->payment_method != 'cod') {
-                try {
-                    \Illuminate\Support\Facades\Mail::to($order->customer_email)->send(new \App\Mail\RefundOrderMail($order));
-                } catch (\Exception $e) {
-                    \Log::error('Lỗi gửi mail hoàn tiền: ' . $e->getMessage());
-                }
-            }
+            \Illuminate\Support\Facades\DB::commit();
+            return back()->with('success_order', $message);
 
-            DB::commit();
-            return back()->with('success_order', 'Hủy đơn hàng thành công!');
         } catch (\Exception $e) {
-            DB::rollBack();
-            return back()->with('error_order', 'Có lỗi xảy ra: ' . $e->getMessage());
+            \Illuminate\Support\Facades\DB::rollBack();
+            return back()->with('error_order', $e->getMessage());
         }
     }
 

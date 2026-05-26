@@ -20,7 +20,6 @@ class StatisticService
             $customerQuery = User::where('role', 'customer');
             $startDate = null;
 
-            // VÁ LỖI 2.4: Xử lý logic thời gian chuẩn, không dùng subYears(10)
             if ($days > 0) {
                 $startDate = Carbon::today()->subDays($days - 1);
                 $baseOrderQuery->where('created_at', '>=', $startDate);
@@ -31,23 +30,25 @@ class StatisticService
             $completedOrders = (clone $baseOrderQuery)->where('order_status', 'completed')->count();
             $cancelledOrders = (clone $baseOrderQuery)->where('order_status', 'cancelled')->count();
 
+            // ĐÃ FIX: Tính Doanh thu ròng = Tổng tiền - Phí Ship (Chỉ tính đơn hoàn thành & đã thanh toán)
             $netRevenue = (clone $baseOrderQuery)
                 ->where('order_status', 'completed')
                 ->where('payment_status', 'paid')
-                ->sum('total_amount');
+                ->sum(DB::raw('total_amount - shipping_fee')); 
 
             $aov = $completedOrders > 0 ? round($netRevenue / $completedOrders) : 0;
             $cancelRate = $totalOrders > 0 ? round(($cancelledOrders / $totalOrders) * 100, 2) : 0;
 
             return [
+                'total_orders'   => $totalOrders, // ĐÃ BỔ SUNG: Truyền Tổng đơn hàng ra View
                 'net_revenue'    => $netRevenue,
                 'cancel_rate'    => $cancelRate,
                 'aov'            => $aov,
-                'new_customers'  => $customerQuery->count(), // Nâng cấp 3.1
+                'new_customers'  => $customerQuery->count(),
                 'chart_data'     => $this->getRevenueChartOptimized($days),
-                'monthly_chart'  => $this->getMonthlyRevenueChart(), // Nâng cấp 3.2
+                'monthly_chart'  => $this->getMonthlyRevenueChart(),
                 'top_products'   => $this->getTop5Products($startDate),
-                'top_categories' => $this->getTopCategories($startDate), // Nâng cấp 3.4
+                'top_categories' => $this->getTopCategories($startDate),
                 'voucher_stats'  => $this->getVoucherStats($startDate),
             ];
         });
@@ -57,7 +58,8 @@ class StatisticService
     {
         $chartDays = $days == 0 ? 30 : $days; 
 
-        $chartQuery = Order::selectRaw('DATE(created_at) as date, SUM(total_amount) as total')
+        // ĐÃ FIX: Biểu đồ cũng phải hiển thị Doanh thu Ròng (Trừ phí ship)
+        $chartQuery = Order::selectRaw('DATE(created_at) as date, SUM(total_amount - shipping_fee) as total')
             ->where('order_status', 'completed')
             ->where('payment_status', 'paid')
             ->where('created_at', '>=', Carbon::today()->subDays($chartDays - 1))
@@ -73,10 +75,10 @@ class StatisticService
         return ['labels' => $labels, 'data' => $data];
     }
 
-    // NÂNG CẤP 3.2: Biểu đồ doanh thu 6 tháng gần nhất (Bar Chart)
     private function getMonthlyRevenueChart(): array
     {
-        $query = Order::selectRaw('DATE_FORMAT(created_at, "%m/%Y") as month_year, SUM(total_amount) as total')
+        // ĐÃ FIX: Biểu đồ cột tháng cũng phải hiển thị Doanh thu Ròng
+        $query = Order::selectRaw('DATE_FORMAT(created_at, "%m/%Y") as month_year, SUM(total_amount - shipping_fee) as total')
             ->where('order_status', 'completed')
             ->where('payment_status', 'paid')
             ->where('created_at', '>=', Carbon::now()->subMonths(5)->startOfMonth())
@@ -98,7 +100,7 @@ class StatisticService
         $query = OrderItem::select('order_items.product_id', DB::raw('SUM(order_items.quantity) as total_sold'))
             ->join('orders', 'order_items.order_id', '=', 'orders.id')
             ->where('orders.order_status', 'completed')
-            ->where('orders.payment_status', 'paid'); // VÁ LỖI 2.1
+            ->where('orders.payment_status', 'paid');
 
         if ($startDate) $query->where('orders.created_at', '>=', $startDate);
 
@@ -109,7 +111,6 @@ class StatisticService
             ->get();
     }
 
-    // NÂNG CẤP 3.4: Top Danh mục
     private function getTopCategories($startDate)
     {
         $query = DB::table('order_items')
@@ -131,7 +132,7 @@ class StatisticService
     private function getVoucherStats($startDate): array
     {
         $query = Order::where('order_status', 'completed')
-            ->where('payment_status', 'paid'); // VÁ LỖI 2.2
+            ->where('payment_status', 'paid');
 
         if ($startDate) $query->where('created_at', '>=', $startDate);
 

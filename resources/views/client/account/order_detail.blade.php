@@ -4,12 +4,16 @@
 @section('content')
 
 @php
-    // BẢNG DỊCH TRẠNG THÁI & MÀU SẮC & ICON CHO TIMELINE (GIỮ NGUYÊN LOGIC)
+    // BẢNG DỊCH TRẠNG THÁI & MÀU SẮC & ICON CHO TIMELINE (ĐÃ BỔ SUNG)
     $statusMap = [
         'pending' => ['label' => 'Chờ xác nhận', 'color' => 'warning text-dark', 'icon' => 'fa-clock-rotate-left'],
         'confirmed' => ['label' => 'Đã xác nhận', 'color' => 'info', 'icon' => 'fa-clipboard-check'],
         'shipping' => ['label' => 'Đang giao hàng', 'color' => 'primary', 'icon' => 'fa-truck-fast'],
         'completed' => ['label' => 'Hoàn thành', 'color' => 'success', 'icon' => 'fa-box-open'],
+        
+        // ĐÃ THÊM: Trạng thái hiển thị khi chờ duyệt hủy
+        'cancel_requested' => ['label' => 'Yêu cầu hủy', 'color' => 'warning text-dark', 'icon' => 'fa-clock'],
+        
         'cancelled' => ['label' => 'Đã huỷ', 'color' => 'danger', 'icon' => 'fa-xmark-circle'],
         'returned' => ['label' => 'Trả hàng', 'color' => 'secondary', 'icon' => 'fa-arrow-rotate-left'],
     ];
@@ -165,85 +169,118 @@
 
                     {{-- KHỐI 4: THANH TOÁN & TỔNG KẾT --}}
                     <div class="card card-modern border-0">
-                        <div class="card-body p-4">
-                            
-                            {{-- Chi tiết tiền --}}
-                            <div class="d-flex justify-content-between align-items-center mb-3">
-                                <span class="text-muted fw-medium" style="white-space: nowrap; font-size: 15px;">Tạm tính:</span>
-                                <span class="text-dark fw-bold" style="white-space: nowrap; font-size: 16px;">{{ number_format($order->total_amount - $order->shipping_fee + $order->discount_amount, 0, ',', '.') }}₫</span>
-                            </div>
-                            <div class="d-flex justify-content-between align-items-center mb-3">
-                                <span class="text-muted fw-medium" style="white-space: nowrap; font-size: 15px;">Phí vận chuyển:</span>
-                                <span class="text-dark fw-bold" style="white-space: nowrap; font-size: 16px;">{{ number_format($order->shipping_fee, 0, ',', '.') }}₫</span>
-                            </div>
-                            @if($order->discount_amount > 0)
-                            <div class="d-flex justify-content-between align-items-center mb-3">
-                                <span class="text-muted fw-medium" style="white-space: nowrap; font-size: 15px;">Giảm giá:</span>
-                                <span class="text-success fw-bold" style="white-space: nowrap; font-size: 16px;">- {{ number_format($order->discount_amount, 0, ',', '.') }}₫</span>
-                            </div>
-                            @endif
+    <div class="card-body p-4">
+        
+        {{-- Chi tiết tiền --}}
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <span class="text-muted fw-medium" style="white-space: nowrap; font-size: 15px;">Tạm tính:</span>
+            <span class="text-dark fw-bold" style="white-space: nowrap; font-size: 16px;">{{ number_format($order->total_amount - $order->shipping_fee + $order->discount_amount, 0, ',', '.') }}₫</span>
+        </div>
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <span class="text-muted fw-medium" style="white-space: nowrap; font-size: 15px;">Phí vận chuyển:</span>
+            <span class="text-dark fw-bold" style="white-space: nowrap; font-size: 16px;">{{ number_format($order->shipping_fee, 0, ',', '.') }}₫</span>
+        </div>
+        @if($order->discount_amount > 0)
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <span class="text-muted fw-medium" style="white-space: nowrap; font-size: 15px;">Giảm giá:</span>
+            <span class="text-success fw-bold" style="white-space: nowrap; font-size: 16px;">- {{ number_format($order->discount_amount, 0, ',', '.') }}₫</span>
+        </div>
+        @endif
 
-                            {{-- Dải phân cách đứt nét --}}
-                            <div class="dashed-divider my-3"></div>
+        {{-- Dải phân cách đứt nét --}}
+        <div class="dashed-divider my-3"></div>
 
-                            {{-- TỔNG CỘNG --}}
-                            <div class="d-flex justify-content-between align-items-center mb-4">
-                                <span class="fw-bold text-dark text-uppercase" style="font-size: 15px;">Tổng thanh toán:</span>
-                                <span class="text-danger fw-extrabold" style="font-size: 24px; line-height: 1;">{{ number_format($order->total_amount, 0, ',', '.') }}₫</span>
-                            </div>
+        {{-- TỔNG CỘNG --}}
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <span class="fw-bold text-dark text-uppercase" style="font-size: 15px;">Tổng thanh toán:</span>
+            <span class="text-danger fw-extrabold" style="font-size: 24px; line-height: 1;">{{ number_format($order->total_amount, 0, ',', '.') }}₫</span>
+        </div>
 
-                            {{-- Box thông tin phương thức & trạng thái --}}
-                            <div class="payment-info-box bg-light-soft p-3 rounded-3 border">
-                                <div class="d-flex justify-content-between align-items-center mb-3">
-                                    <span class="text-muted fw-medium" style="font-size: 14px;">Phương thức:</span>
-                                    <span class="text-end">
-                                        @if($order->payment_method == 'cod')
-                                            <span class="badge-payment bg-secondary-soft text-secondary-dark"><i class="fa-solid fa-money-bill-wave me-1"></i> Thanh toán COD</span>
-                                        @elseif($order->payment_method == 'vnpay')
-                                            <span class="badge-payment bg-primary px-2 py-1"><i class="fa-solid fa-credit-card me-1"></i> Thanh toán VNPAY</span>
-                                        @elseif($order->payment_method == 'momo')
-                                            <span class="badge-payment bg-danger px-2 py-1"><i class="fa-solid fa-wallet me-1"></i> Ví MOMO</span>
-                                        @else
-                                            <span class="badge-payment bg-dark px-2 py-1">{{ strtoupper($order->payment_method) }}</span>
-                                        @endif
-                                    </span>
-                                </div>
-                                
-                                <div class="d-flex justify-content-between align-items-center">
-                                    <span class="text-muted fw-medium" style="font-size: 14px;">Tình trạng TT:</span>
-                                    <span class="text-end">
-                                        @if($order->payment_status == 'paid')
-                                            <span class="badge-status bg-success-soft text-success-dark"><i class="fa-solid fa-check me-1"></i> ĐÃ THANH TOÁN</span>
-                                        @elseif($order->payment_status == 'refunded')
-                                            <span class="badge-status bg-warning text-dark"><i class="fa-solid fa-rotate-left me-1"></i> ĐÃ HOÀN TIỀN</span>
-                                        @else
-                                            <span class="badge-status bg-danger-soft text-danger-dark"><i class="fa-solid fa-exclamation me-1"></i> CHƯA THANH TOÁN</span>
-                                        @endif
-                                    </span>
-                                </div>
-                            </div>
+        {{-- Box thông tin phương thức & trạng thái --}}
+        <div class="payment-info-box bg-light-soft p-3 rounded-3 border">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <span class="text-muted fw-medium" style="font-size: 14px;">Phương thức:</span>
+                <span class="text-end">
+                    @if($order->payment_method == 'cod')
+                        <span class="badge-payment bg-secondary-soft text-secondary-dark"><i class="fa-solid fa-money-bill-wave me-1"></i> Thanh toán COD</span>
+                    @elseif($order->payment_method == 'vnpay')
+                        <span class="badge-payment bg-primary px-2 py-1"><i class="fa-solid fa-credit-card me-1"></i> Thanh toán VNPAY</span>
+                    @elseif($order->payment_method == 'momo')
+                        <span class="badge-payment bg-danger px-2 py-1"><i class="fa-solid fa-wallet me-1"></i> Ví MOMO</span>
+                    @else
+                        <span class="badge-payment bg-dark px-2 py-1">{{ strtoupper($order->payment_method) }}</span>
+                    @endif
+                </span>
+            </div>
+            
+            <div class="d-flex justify-content-between align-items-center">
+                <span class="text-muted fw-medium" style="font-size: 14px;">Tình trạng TT:</span>
+                <span class="text-end">
+                    @if($order->payment_status == 'paid')
+                        <span class="badge-status bg-success-soft text-success-dark"><i class="fa-solid fa-check me-1"></i> ĐÃ THANH TOÁN</span>
+                    @elseif($order->payment_status == 'refunded')
+                        <span class="badge-status bg-warning text-dark"><i class="fa-solid fa-rotate-left me-1"></i> ĐÃ HOÀN TIỀN</span>
+                    @else
+                        <span class="badge-status bg-danger-soft text-danger-dark"><i class="fa-solid fa-exclamation me-1"></i> CHƯA THANH TOÁN</span>
+                    @endif
+                </span>
+            </div>
+        </div>
 
-                            {{-- Nút Hủy đơn (chỉ hiện khi pending/confirmed) --}}
-                            @if(in_array($order->order_status, ['pending', 'confirmed']))
-                                <form action="{{ route('account.orders.cancel', $order->order_code) }}" method="POST" class="mt-4">
-                                    @csrf
-                                    <button type="button" class="btn btn-cancel-modern w-100 js-btn-cancel-order">
-                                        HỦY ĐƠN HÀNG
-                                    </button>
-                                </form>
-                            @endif
+        {{-- ================================================================= --}}
+        {{-- BỔ SUNG: KHU VỰC HIỂN THỊ TRẠNG THÁI HỦY & MINH CHỨNG HOÀN TIỀN --}}
+        {{-- ================================================================= --}}
+        @if($order->order_status == 'cancel_requested')
+            <div class="alert alert-warning mt-4 mb-0 shadow-sm" style="border-left: 4px solid #ffc107; background-color: #fffbeb;">
+                <h6 class="fw-bold text-dark mb-1"><i class="fa-solid fa-clock-rotate-left me-2"></i>Yêu cầu hủy đang chờ Shop duyệt</h6>
+                <p class="mb-0 text-dark" style="font-size: 14px;"><strong>Lý do của bạn:</strong> {{ $order->cancel_reason ?? 'Không có lý do' }}</p>
+            </div>
+        @elseif($order->order_status == 'cancelled' && $order->payment_method == 'vnpay')
+            @if($order->payment_status == 'refunded')
+                @php
+                    $paymentInfo = \App\Models\Payment::where('order_id', $order->id)
+                                    ->where('payment_status', 'success')
+                                    ->where('payment_gateway', 'vnpay')
+                                    ->first();
+                @endphp
+                <div class="alert alert-success mt-4 mb-0 shadow-sm" style="border-left: 4px solid #28a745; background-color: #f0fdf4;">
+                    <h6 class="fw-bold text-success mb-1"><i class="fa-solid fa-circle-check me-2"></i>Đã hoàn tiền tự động qua VNPAY</h6>
+                    <p class="mb-1 text-dark" style="font-size: 14px;">
+                        Mã giao dịch : <strong class="fs-11">{{ $paymentInfo->vnp_refund_transaction_no ?? 'Đang cập nhật' }}</strong>
+                    </p>
+                    <p class="mb-0 text-muted" style="font-size: 13px; font-style: italic;">
+                        * Số tiền sẽ được hoàn về thẻ/tài khoản ngân hàng của bạn trong vòng 1-3 ngày làm việc. Bạn có thể dùng mã GD này để đối soát với ngân hàng.
+                    </p>
+                </div>
+            @elseif($order->payment_status == 'paid')
+                <div class="alert alert-warning mt-4 mb-0 shadow-sm" style="border-left: 4px solid #ffc107; background-color: #fffbeb;">
+                    <h6 class="fw-bold text-dark mb-0"><i class="fa-solid fa-arrows-rotate fa-spin me-2"></i>Đơn đã hủy - Đang chờ Shop hoàn tiền</h6>
+                </div>
+            @endif
+        @endif
+        {{-- ================================================================= --}}
 
-                            {{-- Nút Đã nhận hàng (chỉ hiện khi đang giao) --}}
-                            @if($order->order_status == 'shipping')
-                                <form action="{{ route('account.orders.receive', $order->order_code) }}" method="POST" class="mt-4">
-                                    @csrf
-                                    <button type="button" class="btn btn-success w-100 fw-bold py-2 rounded-3 js-btn-receive-order" style="border-width: 2px; font-size: 16px;">
-                                        <i class="fa-solid fa-box-open me-1"></i> ĐÃ NHẬN ĐƯỢC HÀNG
-                                    </button>
-                                </form>
-                            @endif
-                        </div>
-                    </div>
+        {{-- Nút Hủy đơn (chỉ hiện khi pending/confirmed) --}}
+        @if(in_array($order->order_status, ['pending', 'confirmed']))
+            <form action="{{ route('account.orders.cancel', $order->order_code) }}" method="POST" class="mt-4">
+                @csrf
+                <button type="button" class="btn btn-cancel-modern w-100 js-btn-cancel-order">
+                    HỦY ĐƠN HÀNG
+                </button>
+            </form>
+        @endif
+
+        {{-- Nút Đã nhận hàng (chỉ hiện khi đang giao) --}}
+        @if($order->order_status == 'shipping')
+            <form action="{{ route('account.orders.receive', $order->order_code) }}" method="POST" class="mt-4">
+                @csrf
+                <button type="button" class="btn btn-success w-100 fw-bold py-2 rounded-3 js-btn-receive-order" style="border-width: 2px; font-size: 16px;">
+                    <i class="fa-solid fa-box-open me-1"></i> ĐÃ NHẬN ĐƯỢC HÀNG
+                </button>
+            </form>
+        @endif
+    </div>
+</div>
                     
                 </div>
             </div>
@@ -321,17 +358,32 @@
 @push('scripts')
 <script>
     $(document).ready(function() {
+       // SCRIPT XÁC NHẬN HỦY ĐƠN HÀNG TRÊN TRANG CHI TIẾT (ĐÃ CẬP NHẬT YÊU CẦU LÝ DO)
         $('.js-btn-cancel-order').on('click', function(e) {
             e.preventDefault();
             var form = $(this).closest('form');
+            
             swal({
                 title: "Xác nhận hủy đơn?",
-                text: "Bạn có chắc chắn muốn hủy đơn hàng này không? Thao tác này không thể hoàn tác.",
+                text: "Vui lòng nhập rõ lý do bạn muốn hủy đơn hàng này (Bắt buộc):",
+                content: "input",
                 icon: "warning",
-                buttons: ["Đóng lại", "Đồng ý hủy"],
+                buttons: ["Đóng lại", "Gửi yêu cầu hủy"],
                 dangerMode: true,
-            }).then(function(willCancel) {
-                if (willCancel) {
+            }).then(function(reason) {
+                if (reason === "") {
+                    swal("Lỗi!", "Bạn bắt buộc phải nhập lý do hủy đơn!", "error");
+                    return false;
+                }
+                
+                if (reason) {
+                    // Tự động tạo input ẩn để truyền lý do hủy đơn lên Controller
+                    $('<input>').attr({
+                        type: 'hidden',
+                        name: 'cancel_reason',
+                        value: reason
+                    }).appendTo(form);
+                    
                     form.submit();
                 }
             });
@@ -355,5 +407,6 @@
 
         
     });
+
 </script>
 @endpush

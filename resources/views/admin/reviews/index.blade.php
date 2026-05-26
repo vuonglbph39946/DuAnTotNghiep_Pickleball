@@ -77,13 +77,11 @@
                                         {{ $review->comment }}
                                     </div>
 
-                                  {{-- ẢNH ĐÍNH KÈM --}}
+                                  {{-- ẢNH ĐÍNH KÈM (ĐÃ CHÈN SỰ KIỆN ONCLICK ĐỂ MỞ POPUP) --}}
                                     @if($review->images && $review->images->count() > 0)
                                         <div class="d-flex gap-2 mb-2 flex-wrap">
                                             @foreach($review->images as $img)
-                                                <a href="{{ asset('storage/' . $img->image_path) }}" target="_blank">
-                                                    <img src="{{ asset('storage/' . $img->image_path) }}" alt="img" class="rounded border" style="width: 50px; height: 50px; object-fit: cover;">
-                                                </a>
+                                                <img src="{{ asset('storage/' . $img->image_path) }}" alt="img" class="rounded border" style="width: 50px; height: 50px; object-fit: cover; cursor: zoom-in;" onclick="openLightbox(this.src)">
                                             @endforeach
                                         </div>
                                     @endif
@@ -130,11 +128,11 @@
                                             <i class="fa fa-reply"></i>
                                         </button>
 
-                                        {{-- Nút Xóa --}}
-                                        <form action="{{ route('admin.reviews.destroy', $review->id) }}" method="POST" onsubmit="return confirm('Cảnh báo: Bạn có chắc chắn muốn xóa vĩnh viễn đánh giá này? Toàn bộ hình ảnh đính kèm cũng sẽ bị xóa!');">
+                                        {{-- Nút Xóa (ĐÃ THAY ĐỔI ĐỂ DÙNG SWEETALERT) --}}
+                                        <form action="{{ route('admin.reviews.destroy', $review->id) }}" method="POST">
                                             @csrf
                                             @method('DELETE')
-                                            <button type="submit" class="btn btn-sm btn-light border text-danger action-btn" title="Xóa vĩnh viễn">
+                                            <button type="button" class="btn btn-sm btn-light border text-danger action-btn" title="Xóa vĩnh viễn" onclick="confirmDelete(this)">
                                                 <i class="fa fa-trash"></i>
                                             </button>
                                         </form>
@@ -181,7 +179,7 @@
                             </tr>
                         @empty
                             <tr>
-                                <td colspan=\"5\" class=\"text-center py-5 text-muted\">
+                                <td colspan="5" class="text-center py-5 text-muted">
                                     <i class="fa fa-comments-o fs-1 mb-3 d-block" style="color: #ccc;"></i>
                                     Chưa có đánh giá nào trong hệ thống.
                                 </td>
@@ -197,11 +195,68 @@
     </div>
 </div>
 
+<div id="imageLightbox" class="lightbox-overlay" onclick="closeLightbox()">
+    <span class="lightbox-close" onclick="closeLightbox()">&times;</span>
+    <img class="lightbox-content" id="lightboxImage" onclick="event.stopPropagation()">
+</div>
+
 <style>
     .custom-admin-table th { font-weight: 600; letter-spacing: 0.5px; }
     .review-stars { color: #ffc107; font-size: 14px; }
     .action-btn { transition: 0.2s ease; border-radius: 6px; padding: 5px 10px; }
     .action-btn:hover { background-color: #f8f9fa; transform: translateY(-1px); box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
     .product-badge a:hover { text-decoration: underline !important; }
+
+    /* CSS CHO LIGHTBOX ẢNH */
+    .lightbox-overlay {
+        position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+        background: rgba(0, 0, 0, 0.85); z-index: 106000;
+        display: none; align-items: center; justify-content: center;
+    }
+    .lightbox-content { max-width: 90vw; max-height: 85vh; border-radius: 8px; }
+    .lightbox-close {
+        position: absolute; top: 20px; right: 30px; color: white;
+        font-size: 40px; font-weight: bold; cursor: pointer; transition: 0.2s;
+    }
+    .lightbox-close:hover { color: #dc3545; transform: scale(1.1); }
 </style>
+
+@push('scripts')
+<script src="https://unpkg.com/sweetalert/dist/sweetalert.min.js"></script>
+
+<script>
+    // Hàm gọi SweetAlert để xác nhận xóa
+    function confirmDelete(button) {
+        swal({
+            title: "Xác nhận xóa?",
+            text: "Đánh giá này và toàn bộ hình ảnh đính kèm sẽ bị xóa vĩnh viễn khỏi hệ thống!",
+            icon: "warning",
+            buttons: ["Hủy bỏ", "Đồng ý xóa"],
+            dangerMode: true,
+        }).then((willDelete) => {
+            if (willDelete) {
+                button.closest('form').submit(); // Nếu đồng ý thì submit form đó
+            }
+        });
+    }
+
+    // Hàm mở ảnh
+    function openLightbox(src) {
+        document.getElementById('lightboxImage').src = src;
+        document.getElementById('imageLightbox').style.display = 'flex';
+    }
+
+    // Hàm đóng ảnh
+    function closeLightbox() {
+        document.getElementById('imageLightbox').style.display = 'none';
+    }
+
+    // Ấn nút ESC trên bàn phím để thoát ảnh
+    document.addEventListener('keydown', function(event) {
+        if (event.key === "Escape") {
+            closeLightbox();
+        }
+    });
+</script>
+@endpush
 @endsection

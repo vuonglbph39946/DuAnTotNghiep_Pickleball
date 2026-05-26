@@ -29,7 +29,7 @@
                                 @endif
                             </li>
                         @endforeach
-                        <li><a href="{{ url('/about') }}">Giới thiệu</a></li>
+                        <li><a href="{{ url('/gioi-thieu') }}">Giới thiệu</a></li>
                         <li><a href="{{ url('/contact') }}">Liên hệ</a></li>
                     </ul>
                 </div>  

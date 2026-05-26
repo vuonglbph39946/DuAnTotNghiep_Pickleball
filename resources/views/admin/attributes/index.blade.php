@@ -48,7 +48,7 @@
                 <table class="table align-middle premium-table mb-0">
                     <thead>
                         <tr>
-                            <th style="width: 10%;">Thuộc tính</th>
+                            <th style="width: 10%;">STT</th>
                             <th style="width: 25%;">Tên Nhóm Phân Loại</th>
                             <th style="width: 45%;">Các Giá Trị (Lựa chọn)</th>
                             <th class="text-end pe-4" style="width: 20%;">Thao tác</th>
@@ -57,7 +57,9 @@
                     <tbody>
                         @forelse($attributes as $attribute)
                             <tr>
-                                <td class="ps-3 py-3"><span class="fw-bold text-dark">#{{ $attribute->id }}</span></td>
+                                <td class="text-center fw-bold text-secondary">
+    {{ $loop->iteration }}
+</td>
                                 <td>
                                     <h6 class="fw-bold mb-1 text-primary">{{ $attribute->name }}</h6>
                                     <span class="text-muted small">Đang có <strong>{{ $attribute->values->count() }}</strong> giá trị</span>

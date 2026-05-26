@@ -44,10 +44,22 @@ class AuthController extends Controller
         }
 
         if (Auth::attempt(['email' => $request->email, 'password' => $request->password])) {
+            $user = Auth::user();
+
+            // ===============================================================
+            // CHỐT CHẶN QUAN TRỌNG: KIỂM TRA TÀI KHOẢN BỊ KHÓA
+            // ===============================================================
+            if ($user->status == 0) {
+                Auth::logout(); // Đăng xuất ngay lập tức nếu bị khóa
+                return back()->withInput($request->only('email'))->withErrors([
+                    'email' => 'Tài khoản của bạn đã bị khóa! Vui lòng liên hệ Hotline: 0967854619 để được hỗ trợ.'
+                ]);
+            }
+            // ===============================================================
+
             $request->session()->regenerate();
             RateLimiter::clear($throttleKey);
 
-            $user = Auth::user();
             Order::where('customer_email', $user->email)
                  ->whereNull('user_id')
                  ->update(['user_id' => $user->id]);

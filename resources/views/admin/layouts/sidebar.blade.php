@@ -10,10 +10,21 @@
 
     <li class="nav-item nav-category">Cửa Hàng</li>
     
-    <li class="nav-item {{ request()->is('admin/orders') || (request()->is('admin/orders/*') && !request()->is('admin/orders/cancel-requests*')) ? 'active' : '' }}">
+    {{-- ĐÃ SỬA: Dùng routeIs để nhận diện Active chuẩn xác hơn --}}
+    <li class="nav-item {{ request()->routeIs('admin.orders.index') || request()->routeIs('admin.orders.show') ? 'active' : '' }}">
       <a class="nav-link" href="{{ route('admin.orders.index') }}">
         <i class="mdi mdi-receipt menu-icon"></i>
         <span class="menu-title">Đơn Hàng</span>
+      </a>
+    </li>
+
+    {{-- ======================================================== --}}
+    {{-- ĐÃ BỔ SUNG: MENU QUẢN LÝ YÊU CẦU HỦY ĐƠN RIÊNG BIỆT --}}
+    {{-- ======================================================== --}}
+    <li class="nav-item {{ request()->routeIs('admin.orders.cancel_requests') ? 'active' : '' }}">
+      <a class="nav-link" href="{{ route('admin.orders.cancel_requests') }}">
+        <i class="mdi mdi-text-box-remove-outline menu-icon text-danger"></i>
+        <span class="menu-title text-danger fw-bold">Quản lý hủy đơn</span>
       </a>
     </li>
 
@@ -53,12 +64,24 @@
       </a>
     </li>
 
-    <li class="nav-item">
-    <a class="nav-link" href="{{ route('admin.reviews.index') }}">
+    <li class="nav-item {{ request()->is('admin/reviews*') ? 'active' : '' }}">
+      <a class="nav-link" href="{{ route('admin.reviews.index') }}">
         <i class="mdi mdi-star-circle-outline menu-icon"></i>
         <span class="menu-title">Đánh Giá-Bình Luận</span>
-    </a>
-</li>
+      </a>
+    </li>
+
+    {{-- ======================================================== --}}
+    {{-- ĐÃ BỔ SUNG: PHÂN MỤC HỆ THỐNG VÀ QUẢN LÝ NGƯỜI DÙNG --}}
+    {{-- ======================================================== --}}
+    <li class="nav-item nav-category">Hệ Thống</li>
+
+    <li class="nav-item {{ request()->is('admin/users*') || request()->routeIs('admin.users.*') ? 'active' : '' }}">
+      <a class="nav-link" href="{{ route('admin.users.index') }}">
+        <i class="mdi mdi-account-group-outline menu-icon text-info"></i>
+        <span class="menu-title fw-bold">Quản lý Người dùng</span>
+      </a>
+    </li>
 
   </ul>
 </nav>
